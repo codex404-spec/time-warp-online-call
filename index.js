@@ -13,7 +13,11 @@ app.use(express.json());
 
 console.log("🚀 Starting Time Warp Online Call...");
 
-// DeepSeek Configuration
+if (!process.env.DEEPSEEK_API_KEY) {
+  console.error("❌ DEEPSEEK_API_KEY is missing in Railway Variables!");
+}
+
+// DeepSeek Setup
 const deepseek = new OpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY,
   baseURL: "https://api.deepseek.com"
@@ -28,42 +32,26 @@ app.get('/health', (req, res) => {
   });
 });
 
-// AI Chat Endpoint
 app.post('/api/chat', async (req, res) => {
   try {
     const { message } = req.body;
-
-    if (!message) {
-      return res.status(400).json({ error: "Message is required" });
-    }
+    if (!message) return res.status(400).json({ error: "Message is required" });
 
     const completion = await deepseek.chat.completions.create({
-      model: "deepseek-chat",           // DeepSeek's best model
+      model: "deepseek-chat",
       messages: [
-        { 
-          role: "system", 
-          content: "You are a professional, friendly AI assistant for Time Warp Online Call - an AI-powered cloud phone system." 
-        },
+        { role: "system", content: "You are a helpful AI assistant for Time Warp Online Call." },
         { role: "user", content: message }
       ],
-      temperature: 0.7,
-      max_tokens: 800
     });
 
-    res.json({
-      reply: completion.choices[0].message.content,
-      success: true,
-      provider: "deepseek"
-    });
+    res.json({ reply: completion.choices[0].message.content, success: true });
   } catch (error) {
-    console.error("DeepSeek Error:", error.message);
-    res.status(500).json({ 
-      error: "AI service error",
-      message: error.message 
-    });
+    console.error("Error:", error.message);
+    res.status(500).json({ error: error.message });
   }
 });
 
 app.listen(port, () => {
-  console.log(`✅ Time Warp Online Call is running on port ${port} (DeepSeek)`);
+  console.log(`✅ Time Warp Online Call running on port ${port}`);
 });
