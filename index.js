@@ -109,6 +109,10 @@ io.on('connection', (socket) => {
     io.emit('receiveMessage', messageData);
   });
 
+  socket.on('sendAudioMessage', (audioData) => {
+    io.emit('receiveAudioMessage', audioData);
+  });
+
   socket.on('disconnect', () => {
     onlineUsers.delete(socket.id);
     io.emit('onlineUsers', Array.from(onlineUsers.values()));

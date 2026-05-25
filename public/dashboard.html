@@ -99,7 +99,19 @@
     function addMessage(msg, isMine) {
       const div = document.createElement('div');
       div.className = `message ${isMine ? 'sent' : 'received'}`;
-      div.textContent = `${msg.from}: ${msg.text || '[Media]'}`;
+
+      if (msg.type === 'audio') {
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.src = msg.audioData;
+        audio.style.display = 'block';
+        audio.style.marginTop = '6px';
+        div.innerHTML = `<span style="font-size:13px;opacity:0.8;">🎵 ${msg.from}</span><br>`;
+        div.appendChild(audio);
+      } else {
+        div.textContent = `${msg.from}: ${msg.text || '[Media]'}`;
+      }
+
       document.getElementById('messages').appendChild(div);
       document.getElementById('messages').scrollTop = 99999;
     }
@@ -110,25 +122,49 @@
       }
     });
 
+    socket.on('receiveAudioMessage', (msg) => {
+      if (currentChatWith && msg.from === currentChatWith.name) {
+        addMessage(msg, false);
+      }
+    });
+
     // Voice Recording
     async function toggleVoiceRecording() {
       const btn = document.getElementById('recordBtn');
       if (!mediaRecorder) {
+        if (!currentChatWith) return alert("Select a user to send a voice message to.");
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
         mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
         mediaRecorder.onstop = () => {
           const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-          // For now we show alert (later we can upload)
-          alert("Voice message recorded! (Upload feature coming next)");
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64Audio = reader.result;
+            const msg = {
+              from: myName,
+              to: currentChatWith.name,
+              type: 'audio',
+              audioData: base64Audio,
+              time: new Date().toLocaleTimeString()
+            };
+            socket.emit('sendAudioMessage', msg);
+            addMessage(msg, true);
+          };
+          reader.readAsDataURL(audioBlob);
           audioChunks = [];
+          // Stop all tracks to release the microphone
+          stream.getTracks().forEach(track => track.stop());
         };
         mediaRecorder.start();
         btn.textContent = "⏹️ Stop";
+        btn.style.background = "#b91c1c";
       } else {
         mediaRecorder.stop();
         mediaRecorder = null;
         btn.textContent = "🎤";
+        btn.style.background = "#ef4444";
       }
     }
 
