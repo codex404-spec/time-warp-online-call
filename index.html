@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Time Warp Online Call</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #0f172a; color: white; text-align: center; padding: 40px; }
+    .container { max-width: 600px; margin: auto; }
+    h1 { color: #22d3ee; }
+    button { padding: 15px 30px; font-size: 18px; margin: 10px; border: none; border-radius: 50px; cursor: pointer; }
+    #startCall { background: #22d3ee; color: black; }
+    #status { margin: 20px; font-size: 18px; min-height: 30px; }
+    .call-active { color: #4ade80; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 Time Warp Online Call</h1>
+    <p>AI Voice Calls — No Phone Number Needed</p>
+    
+    <button id="startCall">🎙️ Start AI Voice Call</button>
+    <button id="endCall" style="display:none; background:#ef4444; color:white;">End Call</button>
+    
+    <div id="status">Click "Start AI Voice Call" to begin</div>
+  </div>
+
+  <script>
+    let isCalling = false;
+
+    document.getElementById('startCall').addEventListener('click', async () => {
+      const status = document.getElementById('status');
+      status.textContent = "Connecting to AI...";
+      status.classList.add('call-active');
+
+      document.getElementById('startCall').style.display = 'none';
+      document.getElementById('endCall').style.display = 'inline-block';
+
+      // TODO: WebRTC + AI Voice will go here
+      alert("Voice call feature coming in next update! For now, text chat is ready.");
+      
+      // You can test text chat here
+      const message = prompt("Type a message to AI:");
+      if (message) {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
+        });
+        const data = await res.json();
+        alert("AI Reply: " + data.reply);
+      }
+    });
+
+    document.getElementById('endCall').addEventListener('click', () => {
+      document.getElementById('startCall').style.display = 'inline-block';
+      document.getElementById('endCall').style.display = 'none';
+      document.getElementById('status').textContent = "Call ended.";
+    });
+  </script>
+</body>
+</html>
