@@ -11,8 +11,12 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+console.log("🚀 Starting Time Warp Online Call...");
+
+// DeepSeek Configuration
+const deepseek = new OpenAI({
+  apiKey: process.env.DEEPSEEK_API_KEY,
+  baseURL: "https://api.deepseek.com"
 });
 
 // Health Check
@@ -20,33 +24,46 @@ app.get('/health', (req, res) => {
   res.json({
     status: "✅ Healthy",
     app: "Time Warp Online Call",
-    time: new Date().toISOString()
+    ai: "DeepSeek"
   });
 });
 
-// Basic AI Chat Endpoint
+// AI Chat Endpoint
 app.post('/api/chat', async (req, res) => {
   try {
-    const { message, contactId } = req.body;
+    const { message } = req.body;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+    if (!message) {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
+    const completion = await deepseek.chat.completions.create({
+      model: "deepseek-chat",           // DeepSeek's best model
       messages: [
-        { role: "system", content: "You are a friendly AI assistant for Time Warp Online Call. Help users with calls, messaging, and bookings." },
+        { 
+          role: "system", 
+          content: "You are a professional, friendly AI assistant for Time Warp Online Call - an AI-powered cloud phone system." 
+        },
         { role: "user", content: message }
       ],
       temperature: 0.7,
+      max_tokens: 800
     });
 
     res.json({
       reply: completion.choices[0].message.content,
-      success: true
+      success: true,
+      provider: "deepseek"
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("DeepSeek Error:", error.message);
+    res.status(500).json({ 
+      error: "AI service error",
+      message: error.message 
+    });
   }
 });
 
 app.listen(port, () => {
-  console.log(`🚀 Time Warp Online Call API running on port ${port}`);
+  console.log(`✅ Time Warp Online Call is running on port ${port} (DeepSeek)`);
 });
