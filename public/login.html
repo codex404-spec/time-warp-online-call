@@ -5,18 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login - Time Warp</title>
   <style>
-    body { font-family: Arial; background: #0f172a; color: white; text-align: center; padding: 50px; }
-    input, button { padding: 12px; margin: 10px; width: 300px; border-radius: 8px; }
-    button { background: #22d3ee; color: black; font-weight: bold; cursor: pointer; }
+    body { 
+      font-family: Arial, sans-serif; 
+      background: #0f172a; 
+      color: white; 
+      text-align: center; 
+      padding: 50px; 
+    }
+    input, button { 
+      padding: 12px; 
+      margin: 10px; 
+      width: 300px; 
+      border-radius: 8px; 
+    }
+    button { 
+      background: #22d3ee; 
+      color: black; 
+      font-weight: bold; 
+      cursor: pointer; 
+    }
   </style>
 </head>
 <body>
-  <h1>Time Warp Online Call</h1>
+  <h1>🚀 Time Warp Online Call</h1>
   <h2>Login</h2>
+  
   <input type="email" id="email" placeholder="Email" /><br>
   <input type="password" id="password" placeholder="Password" /><br>
   <button onclick="login()">Login</button>
-  <p>Don't have account? <a href="/register" style="color:#22d3ee">Register</a></p>
+  
+  <p>Don't have an account? 
+    <a href="/register" style="color:#22d3ee; font-weight:bold;">Create Account</a>
+  </p>
 
   <script>
     async function login() {
@@ -28,6 +48,7 @@
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({email, password})
       });
+      
       const data = await res.json();
 
       if (data.success) {
@@ -35,7 +56,7 @@
         localStorage.setItem('name', data.name);
         window.location.href = '/dashboard';
       } else {
-        alert(data.error);
+        alert(data.error || "Login failed");
       }
     }
   </script>
