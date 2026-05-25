@@ -3,157 +3,134 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Time Warp Online Call</title>
+  <title>Time Warp - Chat</title>
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; background: #0f172a; color: white; margin: 0; }
+    body { margin:0; font-family: Arial; background: #0f172a; color: white; }
     .app { display: flex; height: 100vh; }
-    .sidebar { width: 300px; background: #1e2937; padding: 20px; border-right: 1px solid #334155; overflow-y: auto; }
+    .sidebar { width: 320px; background: #1e2937; padding: 20px; border-right: 1px solid #334155; }
     .chat-area { flex: 1; display: flex; flex-direction: column; }
-    .header { padding: 15px; background: #1e2937; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+    .header { padding: 15px; background: #1e2937; border-bottom: 1px solid #334155; }
     .messages { flex: 1; padding: 20px; overflow-y: auto; background: #0f172a; }
-    .message { margin: 10px 0; padding: 12px 16px; border-radius: 12px; max-width: 75%; }
+    .message { margin: 8px 0; padding: 12px 16px; border-radius: 12px; max-width: 75%; }
     .sent { background: #22d3ee; color: black; margin-left: auto; }
     .received { background: #334155; }
-    .input-area { padding: 15px; background: #1e2937; display: flex; gap: 10px; }
-    input { flex: 1; padding: 14px; border: none; border-radius: 8px; font-size: 16px; }
-    button { padding: 12px 20px; background: #22d3ee; color: black; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+    .input-area { padding: 15px; background: #1e2937; display: flex; gap: 8px; flex-wrap: wrap; }
+    input { flex: 1; padding: 14px; border: none; border-radius: 8px; }
+    button { padding: 12px 18px; border: none; border-radius: 8px; cursor: pointer; }
+    .send-btn { background: #22d3ee; color: black; }
     .call-btn { background: #4ade80; }
-    .user-item { padding: 12px; margin: 5px 0; border-radius: 8px; cursor: pointer; }
+    .upload-btn { background: #8b5cf6; }
+    .user-item { padding: 12px; margin: 4px 0; border-radius: 8px; cursor: pointer; }
     .user-item:hover { background: #334155; }
-    .search { padding: 10px; width: 100%; margin-bottom: 15px; border-radius: 8px; }
   </style>
 </head>
 <body>
   <div class="app">
-    <!-- Sidebar -->
     <div class="sidebar">
-      <h2>👥 Users</h2>
-      <input type="text" id="searchInput" class="search" placeholder="Search users..." onkeyup="searchUsers()" />
-      <div id="userList"></div>
+      <h2>🟢 Online Users</h2>
+      <div id="onlineUsers"></div>
     </div>
 
-    <!-- Chat Area -->
     <div class="chat-area">
       <div class="header">
-        <h2 id="chatWith">Select a user to chat</h2>
-        <div>Welcome, <span id="username"></span> | <a href="/login" style="color:#ef4444">Logout</a></div>
+        <h2 id="chatHeader">Select a user to start chatting</h2>
+        <span>Welcome, <b id="myName"></b></span>
       </div>
       
       <div class="messages" id="messages"></div>
       
       <div class="input-area">
         <input type="text" id="messageInput" placeholder="Type a message..." />
-        <button onclick="sendMessage()">Send</button>
-        <button class="call-btn" onclick="startVoiceCall()">🎙️ Voice Call</button>
-        <button onclick="startVideoCall()" style="background:#f97316;">📹 Video Call</button>
+        <button class="send-btn" onclick="sendMessage()">Send</button>
+        <button class="call-btn" onclick="startAudioCall()">🎙️ Audio Call</button>
+        <button onclick="startVideoCall()" style="background:#f97316;">📹 Video</button>
+        <button class="upload-btn" onclick="document.getElementById('fileInput').click()">📎</button>
+        <input type="file" id="fileInput" style="display:none" accept="image/*,video/*,audio/*" />
       </div>
     </div>
   </div>
 
   <script>
+    const socket = io();
     const token = localStorage.getItem('token');
     if (!token) window.location.href = '/login';
 
     let currentChatWith = null;
-    let messagesStore = {};
-    const currentUserName = localStorage.getItem('name') || "You";
+    let myName = localStorage.getItem('name') || "You";
 
-    document.getElementById('username').textContent = currentUserName;
+    document.getElementById('myName').textContent = myName;
 
-    // Sample Users
-    let users = [
-      { id: 1, name: "Sarah Chen", status: "Online" },
-      { id: 2, name: "Michael Okon", status: "Online" },
-      { id: 3, name: "Aisha Bello", status: "Online" },
-      { id: 4, name: "David Adeyemi", status: "Away" }
-    ];
+    // Connect to socket
+    socket.emit('login', { name: myName });
 
-    function loadUsers(filteredUsers = users) {
-      const container = document.getElementById('userList');
+    socket.on('onlineUsers', (users) => {
+      const container = document.getElementById('onlineUsers');
       container.innerHTML = '';
-      
-      filteredUsers.forEach(user => {
-        const div = document.createElement('div');
-        div.className = 'user-item';
-        div.innerHTML = `<strong>${user.name}</strong><br><small style="color:#4ade80">${user.status}</small>`;
-        div.onclick = () => startChatWith(user);
-        container.appendChild(div);
+      users.forEach(user => {
+        if (user.name !== myName) {
+          const div = document.createElement('div');
+          div.className = 'user-item';
+          div.innerHTML = `<strong>${user.name}</strong>`;
+          div.onclick = () => startChat(user);
+          container.appendChild(div);
+        }
       });
-    }
+    });
 
-    function searchUsers() {
-      const term = document.getElementById('searchInput').value.toLowerCase();
-      const filtered = users.filter(u => u.name.toLowerCase().includes(term));
-      loadUsers(filtered);
-    }
-
-    function startChatWith(user) {
+    function startChat(user) {
       currentChatWith = user;
-      document.getElementById('chatWith').textContent = `💬 Chatting with ${user.name}`;
+      document.getElementById('chatHeader').textContent = `Chatting with ${user.name}`;
       document.getElementById('messages').innerHTML = '';
-      
-      if (messagesStore[user.id]) {
-        messagesStore[user.id].forEach(m => addMessage(m.text, m.from));
-      }
     }
 
-    function addMessage(text, from) {
-      const div = document.createElement('div');
-      div.className = `message ${from === 'me' ? 'sent' : 'received'}`;
-      div.textContent = text;
-      document.getElementById('messages').appendChild(div);
-      document.getElementById('messages').scrollTop = 9999;
-    }
-
-    async function sendMessage() {
+    function sendMessage() {
       const input = document.getElementById('messageInput');
       const text = input.value.trim();
       if (!text || !currentChatWith) return;
 
-      addMessage(text, 'me');
-      if (!messagesStore[currentChatWith.id]) messagesStore[currentChatWith.id] = [];
-      messagesStore[currentChatWith.id].push({text, from: 'me'});
+      const messageData = {
+        from: myName,
+        to: currentChatWith.name,
+        text: text,
+        type: 'text',
+        time: new Date().toLocaleTimeString()
+      };
 
+      socket.emit('sendMessage', messageData);
+      addMessage(messageData, true);
       input.value = '';
-
-      // Improved AI Integration
-      setTimeout(async () => {
-        try {
-          const res = await fetch('/api/chat', {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({ message: text })
-          });
-          const data = await res.json();
-          
-          addMessage(data.reply || "I'm here!", 'them');
-          messagesStore[currentChatWith.id].push({text: data.reply, from: 'them'});
-        } catch(e) {
-          addMessage("AI is thinking...", 'them');
-        }
-      }, 700);
     }
 
-    function startVoiceCall() {
-      if (!currentChatWith) return alert("Select a user first!");
-      alert(`🎙️ Starting Voice Call with ${currentChatWith.name}...\n\n(Real WebRTC voice calling coming in next update)`);
-      // Future: WebRTC implementation
+    function addMessage(msg, isMine) {
+      const div = document.createElement('div');
+      div.className = `message ${isMine ? 'sent' : 'received'}`;
+      div.textContent = `${msg.from}: ${msg.text}`;
+      document.getElementById('messages').appendChild(div);
+      document.getElementById('messages').scrollTop = 99999;
+    }
+
+    socket.on('receiveMessage', (msg) => {
+      if (currentChatWith && msg.from === currentChatWith.name) {
+        addMessage(msg, false);
+      }
+    });
+
+    // Audio & Video Calls (Basic)
+    function startAudioCall() {
+      if (!currentChatWith) return alert("Select a user first");
+      alert(`📞 Starting Audio Call with ${currentChatWith.name}...`);
     }
 
     function startVideoCall() {
-      if (!currentChatWith) return alert("Select a user first!");
-      alert(`📹 Starting Video Call with ${currentChatWith.name}...\n\n(Video calling coming soon)`);
+      if (!currentChatWith) return alert("Select a user first");
+      alert(`📹 Starting Video Call with ${currentChatWith.name}...`);
     }
 
-    // Enter key support
-    document.getElementById('messageInput').addEventListener('keypress', e => {
+    // Enter key to send
+    document.getElementById('messageInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') sendMessage();
     });
-
-    loadUsers();
   </script>
 </body>
 </html>
