@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Time Warp</title>
+  <style>
+    body { font-family: Arial; background: #0f172a; color: white; margin: 0; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #1e2937; border-radius: 10px; }
+    .users { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 30px; }
+    .user-card { background: #1e2937; padding: 20px; border-radius: 12px; text-align: center; }
+    button { padding: 10px 20px; background: #22d3ee; color: black; border: none; border-radius: 8px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Time Warp Online Call</h1>
+    <div>Welcome, <span id="username"></span> | <a href="/login" style="color:#ef4444">Logout</a></div>
+  </div>
+
+  <h2>Online Users</h2>
+  <div class="users" id="userList">
+    <!-- Users will appear here -->
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.href = '/login';
+
+    document.getElementById('username').textContent = localStorage.getItem('name') || "User";
+
+    // Fake users for now (later real users)
+    const fakeUsers = [
+      { id: 1, name: "Sarah Chen", status: "Online" },
+      { id: 2, name: "Michael Okon", status: "Online" },
+      { id: 3, name: "Aisha Bello", status: "Away" }
+    ];
+
+    function loadUsers() {
+      const container = document.getElementById('userList');
+      container.innerHTML = '';
+      
+      fakeUsers.forEach(user => {
+        const card = document.createElement('div');
+        card.className = 'user-card';
+        card.innerHTML = `
+          <h3>${user.name}</h3>
+          <p style="color: #4ade80;">${user.status}</p>
+          <button onclick="startChat(${user.id}, '${user.name}')">💬 Chat</button>
+          <button onclick="startVoiceCall(${user.id}, '${user.name}')" style="background:#22d3ee;">🎙️ Voice Call</button>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function startChat(userId, name) {
+      alert(`Chat with ${name} started! (Feature coming soon)`);
+    }
+
+    function startVoiceCall(userId, name) {
+      alert(`Starting voice call with ${name}... (Voice calling in next update)`);
+    }
+
+    loadUsers();
+  </script>
+</body>
+</html>
