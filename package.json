@@ -1,6 +1,7 @@
 {
   "name": "time-warp-online-call",
   "version": "1.0.0",
+  "type": "module",
   "scripts": {
     "dev": "node index.js",
     "build": "echo 'Build completed'",
