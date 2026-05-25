@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Time Warp</title>
+  <style>
+    body { font-family: Arial; background: #0f172a; color: white; text-align: center; padding: 50px; }
+    input, button { padding: 12px; margin: 10px; width: 300px; border-radius: 8px; }
+    button { background: #22d3ee; color: black; font-weight: bold; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Time Warp Online Call</h1>
+  <h2>Login</h2>
+  <input type="email" id="email" placeholder="Email" /><br>
+  <input type="password" id="password" placeholder="Password" /><br>
+  <button onclick="login()">Login</button>
+  <p>Don't have account? <a href="/register" style="color:#22d3ee">Register</a></p>
+
+  <script>
+    async function login() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({email, password})
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('name', data.name);
+        window.location.href = '/dashboard';
+      } else {
+        alert(data.error);
+      }
+    }
+  </script>
+</body>
+</html>
