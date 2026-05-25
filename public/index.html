@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Time Warp Online Call</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      background: linear-gradient(135deg, #0f172a, #1e2937); 
+      color: white; 
+      text-align: center; 
+      padding: 40px; 
+      margin: 0; 
+    }
+    .container { max-width: 700px; margin: auto; }
+    h1 { color: #22d3ee; font-size: 2.8rem; }
+    button { 
+      padding: 16px 32px; 
+      font-size: 18px; 
+      margin: 12px; 
+      border: none; 
+      border-radius: 50px; 
+      cursor: pointer; 
+      transition: all 0.3s; 
+    }
+    #startCall { background: #22d3ee; color: black; font-weight: bold; }
+    #endCall { background: #ef4444; color: white; display: none; }
+    #status { margin: 25px; font-size: 1.3rem; min-height: 50px; }
+    .call-active { color: #4ade80; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 Time Warp Online Call</h1>
+    <p>AI Voice Calls — No Phone Number Required</p>
+    
+    <button id="startCall">🎙️ Start Voice Call with AI</button>
+    <button id="endCall">⛔ End Call</button>
+    
+    <div id="status">Click the button to start talking to AI</div>
+  </div>
+
+  <script>
+    let recognition;
+    let isCalling = false;
+    let conversationHistory = [];
+
+    const statusEl = document.getElementById('status');
+    const startBtn = document.getElementById('startCall');
+    const endBtn = document.getElementById('endCall');
+
+    if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+    } else {
+      statusEl.textContent = "⚠️ Your browser doesn't support voice. Please use Chrome.";
+    }
+
+    function speak(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.0;
+      speechSynthesis.speak(utterance);
+    }
+
+    async function sendToAI(message) {
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, conversationHistory })
+        });
+        
+        const data = await res.json();
+        
+        conversationHistory.push({ role: "user", content: message });
+        conversationHistory.push({ role: "assistant", content: data.reply });
+        
+        statusEl.textContent = "AI: " + data.reply;
+        speak(data.reply);
+      } catch (err) {
+        statusEl.textContent = "Error connecting to AI";
+      }
+    }
+
+    if (recognition) {
+      recognition.onresult = (event) => {
+        const transcript = event.results[event.results.length - 1][0].transcript;
+        statusEl.textContent = "You said: " + transcript;
+        sendToAI(transcript);
+      };
+
+      recognition.onerror = () => {
+        statusEl.textContent = "Voice error. Try again.";
+      };
+    }
+
+    startBtn.addEventListener('click', () => {
+      if (!recognition) return;
+      startBtn.style.display = 'none';
+      endBtn.style.display = 'inline-block';
+      statusEl.textContent = "🎙️ Listening... Speak now!";
+      statusEl.classList.add('call-active');
+      recognition.start();
+    });
+
+    endBtn.addEventListener('click', () => {
+      recognition.stop();
+      startBtn.style.display = 'inline-block';
+      endBtn.style.display = 'none';
+      statusEl.textContent = "Call ended.";
+      statusEl.classList.remove('call-active');
+      speechSynthesis.cancel();
+    });
+  </script>
+</body>
+</html>
