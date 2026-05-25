@@ -41,7 +41,10 @@
     <div class="chat-area">
       <div class="header">
         <h2 id="chatHeader">Select someone to chat</h2>
-        <span>Welcome, <b id="myName"></b></span>
+        <div style="display:flex; align-items:center; gap:16px;">
+          <span>Welcome, <b id="myName"></b></span>
+          <button onclick="logout()" style="background:#ef4444; color:white; padding:8px 16px; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">Logout</button>
+        </div>
       </div>
       
       <div class="messages" id="messages"></div>
@@ -59,6 +62,20 @@
   </div>
 
   <script>
+    // Guard: redirect to login if no token is present
+    (function requireAuth() {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        window.location.replace('/login');
+      }
+    })();
+
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('name');
+      window.location.replace('/login');
+    }
+
     const socket = io();
     let currentChatWith = null;
     let myName = localStorage.getItem('name') || "You";
