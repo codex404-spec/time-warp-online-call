@@ -5,61 +5,130 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - Time Warp</title>
   <style>
-    body { font-family: Arial; background: #0f172a; color: white; margin: 0; padding: 20px; }
-    .header { display: flex; justify-content: space-between; align-items: center; padding: 15px; background: #1e2937; border-radius: 10px; }
-    .users { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 30px; }
-    .user-card { background: #1e2937; padding: 20px; border-radius: 12px; text-align: center; }
-    button { padding: 10px 20px; background: #22d3ee; color: black; border: none; border-radius: 8px; cursor: pointer; }
+    body { font-family: Arial, sans-serif; background: #0f172a; color: white; margin: 0; }
+    .app { display: flex; height: 100vh; }
+    .sidebar { width: 280px; background: #1e2937; padding: 20px; border-right: 1px solid #334155; }
+    .chat-area { flex: 1; display: flex; flex-direction: column; }
+    .header { padding: 15px; background: #1e2937; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; }
+    .messages { flex: 1; padding: 20px; overflow-y: auto; background: #0f172a; }
+    .message { margin: 10px 0; padding: 12px; border-radius: 12px; max-width: 70%; }
+    .sent { background: #22d3ee; color: black; align-self: flex-end; margin-left: auto; }
+    .received { background: #334155; align-self: flex-start; }
+    .input-area { padding: 15px; background: #1e2937; display: flex; }
+    input { flex: 1; padding: 12px; border: none; border-radius: 8px; margin-right: 10px; }
+    button { padding: 12px 24px; background: #22d3ee; color: black; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+    .user-item { padding: 12px; cursor: pointer; border-radius: 8px; }
+    .user-item:hover { background: #334155; }
+    .online { color: #4ade80; }
   </style>
 </head>
 <body>
-  <div class="header">
-    <h1>Time Warp Online Call</h1>
-    <div>Welcome, <span id="username"></span> | <a href="/login" style="color:#ef4444">Logout</a></div>
-  </div>
+  <div class="app">
+    <!-- Sidebar - Users -->
+    <div class="sidebar">
+      <h2>🟢 Online Users</h2>
+      <div id="userList"></div>
+    </div>
 
-  <h2>Online Users</h2>
-  <div class="users" id="userList">
-    <!-- Users will appear here -->
+    <!-- Main Chat Area -->
+    <div class="chat-area">
+      <div class="header">
+        <h2 id="chatWith">Select a user to start chatting</h2>
+        <div>Welcome, <span id="username"></span> <a href="/login" style="color:#ef4444">Logout</a></div>
+      </div>
+      
+      <div class="messages" id="messages"></div>
+      
+      <div class="input-area">
+        <input type="text" id="messageInput" placeholder="Type a message..." />
+        <button onclick="sendMessage()">Send</button>
+      </div>
+    </div>
   </div>
 
   <script>
     const token = localStorage.getItem('token');
     if (!token) window.location.href = '/login';
 
+    let currentUser = null;
+    let currentChatWith = null;
+    const messagesStore = {}; // Simple in-memory chat storage
+
     document.getElementById('username').textContent = localStorage.getItem('name') || "User";
 
-    // Fake users for now (later real users)
-    const fakeUsers = [
+    // Fake users
+    const users = [
       { id: 1, name: "Sarah Chen", status: "Online" },
       { id: 2, name: "Michael Okon", status: "Online" },
-      { id: 3, name: "Aisha Bello", status: "Away" }
+      { id: 3, name: "Aisha Bello", status: "Online" },
+      { id: 4, name: "David Adeyemi", status: "Away" }
     ];
 
     function loadUsers() {
       const container = document.getElementById('userList');
       container.innerHTML = '';
       
-      fakeUsers.forEach(user => {
-        const card = document.createElement('div');
-        card.className = 'user-card';
-        card.innerHTML = `
-          <h3>${user.name}</h3>
-          <p style="color: #4ade80;">${user.status}</p>
-          <button onclick="startChat(${user.id}, '${user.name}')">💬 Chat</button>
-          <button onclick="startVoiceCall(${user.id}, '${user.name}')" style="background:#22d3ee;">🎙️ Voice Call</button>
+      users.forEach(user => {
+        const div = document.createElement('div');
+        div.className = 'user-item';
+        div.innerHTML = `
+          <strong>${user.name}</strong><br>
+          <small class="online">${user.status}</small>
         `;
-        container.appendChild(card);
+        div.onclick = () => startChatWith(user);
+        container.appendChild(div);
       });
     }
 
-    function startChat(userId, name) {
-      alert(`Chat with ${name} started! (Feature coming soon)`);
+    function startChatWith(user) {
+      currentChatWith = user;
+      document.getElementById('chatWith').textContent = `Chatting with ${user.name}`;
+      document.getElementById('messages').innerHTML = '';
+      
+      // Load previous messages (if any)
+      if (messagesStore[user.id]) {
+        messagesStore[user.id].forEach(msg => addMessage(msg.text, msg.from));
+      }
     }
 
-    function startVoiceCall(userId, name) {
-      alert(`Starting voice call with ${name}... (Voice calling in next update)`);
+    function addMessage(text, from) {
+      const messagesDiv = document.getElementById('messages');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `message ${from === 'me' ? 'sent' : 'received'}`;
+      msgDiv.textContent = text;
+      messagesDiv.appendChild(msgDiv);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
+
+    async function sendMessage() {
+      const input = document.getElementById('messageInput');
+      const text = input.value.trim();
+      
+      if (!text || !currentChatWith) return;
+
+      addMessage(text, 'me');
+
+      // Save message
+      if (!messagesStore[currentChatWith.id]) messagesStore[currentChatWith.id] = [];
+      messagesStore[currentChatWith.id].push({ text, from: 'me' });
+
+      // Simulate AI reply (you can change this to real user later)
+      input.value = '';
+      
+      setTimeout(() => {
+        const replies = ["Got it!", "Interesting...", "Tell me more!", "That's cool 😊"];
+        const reply = replies[Math.floor(Math.random() * replies.length)];
+        addMessage(reply, 'them');
+        
+        if (!messagesStore[currentChatWith.id]) messagesStore[currentChatWith.id] = [];
+        messagesStore[currentChatWith.id].push({ text: reply, from: 'them' });
+      }, 800);
+    }
+
+    // Allow sending with Enter key
+    document.getElementById('messageInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
 
     loadUsers();
   </script>
