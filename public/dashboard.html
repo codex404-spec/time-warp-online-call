@@ -8,21 +8,20 @@
   <style>
     body { margin:0; font-family: Arial; background: #0f172a; color: white; }
     .app { display: flex; height: 100vh; }
-    .sidebar { width: 320px; background: #1e2937; padding: 20px; border-right: 1px solid #334155; }
+    .sidebar { width: 320px; background: #1e2937; padding: 20px; border-right: 1px solid #334155; overflow-y: auto; }
     .chat-area { flex: 1; display: flex; flex-direction: column; }
-    .header { padding: 15px; background: #1e2937; border-bottom: 1px solid #334155; }
+    .header { padding: 15px; background: #1e2937; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; }
     .messages { flex: 1; padding: 20px; overflow-y: auto; background: #0f172a; }
-    .message { margin: 8px 0; padding: 12px 16px; border-radius: 12px; max-width: 75%; }
+    .message { margin: 10px 0; padding: 12px 16px; border-radius: 12px; max-width: 75%; position: relative; }
     .sent { background: #22d3ee; color: black; margin-left: auto; }
     .received { background: #334155; }
-    .input-area { padding: 15px; background: #1e2937; display: flex; gap: 8px; flex-wrap: wrap; }
+    .input-area { padding: 15px; background: #1e2937; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     input { flex: 1; padding: 14px; border: none; border-radius: 8px; }
     button { padding: 12px 18px; border: none; border-radius: 8px; cursor: pointer; }
     .send-btn { background: #22d3ee; color: black; }
-    .call-btn { background: #4ade80; }
+    .record-btn { background: #ef4444; }
     .upload-btn { background: #8b5cf6; }
-    .user-item { padding: 12px; margin: 4px 0; border-radius: 8px; cursor: pointer; }
-    .user-item:hover { background: #334155; }
+    .call-btn { background: #4ade80; }
   </style>
 </head>
 <body>
@@ -34,7 +33,7 @@
 
     <div class="chat-area">
       <div class="header">
-        <h2 id="chatHeader">Select a user to start chatting</h2>
+        <h2 id="chatHeader">Select someone to chat</h2>
         <span>Welcome, <b id="myName"></b></span>
       </div>
       
@@ -43,25 +42,23 @@
       <div class="input-area">
         <input type="text" id="messageInput" placeholder="Type a message..." />
         <button class="send-btn" onclick="sendMessage()">Send</button>
-        <button class="call-btn" onclick="startAudioCall()">🎙️ Audio Call</button>
-        <button onclick="startVideoCall()" style="background:#f97316;">📹 Video</button>
+        <button class="record-btn" id="recordBtn" onclick="toggleVoiceRecording()">🎤</button>
         <button class="upload-btn" onclick="document.getElementById('fileInput').click()">📎</button>
-        <input type="file" id="fileInput" style="display:none" accept="image/*,video/*,audio/*" />
+        <button class="call-btn" onclick="startAudioCall()">🎙️ Call</button>
+        <button onclick="startVideoCall()" style="background:#f97316;">📹 Video</button>
       </div>
+      <input type="file" id="fileInput" style="display:none" accept="image/*,video/*" />
     </div>
   </div>
 
   <script>
     const socket = io();
-    const token = localStorage.getItem('token');
-    if (!token) window.location.href = '/login';
-
     let currentChatWith = null;
     let myName = localStorage.getItem('name') || "You";
+    let mediaRecorder;
+    let audioChunks = [];
 
     document.getElementById('myName').textContent = myName;
-
-    // Connect to socket
     socket.emit('login', { name: myName });
 
     socket.on('onlineUsers', (users) => {
@@ -71,6 +68,10 @@
         if (user.name !== myName) {
           const div = document.createElement('div');
           div.className = 'user-item';
+          div.style.padding = "12px";
+          div.style.margin = "4px 0";
+          div.style.borderRadius = "8px";
+          div.style.cursor = "pointer";
           div.innerHTML = `<strong>${user.name}</strong>`;
           div.onclick = () => startChat(user);
           container.appendChild(div);
@@ -80,7 +81,7 @@
 
     function startChat(user) {
       currentChatWith = user;
-      document.getElementById('chatHeader').textContent = `Chatting with ${user.name}`;
+      document.getElementById('chatHeader').textContent = `💬 ${user.name}`;
       document.getElementById('messages').innerHTML = '';
     }
 
@@ -89,23 +90,16 @@
       const text = input.value.trim();
       if (!text || !currentChatWith) return;
 
-      const messageData = {
-        from: myName,
-        to: currentChatWith.name,
-        text: text,
-        type: 'text',
-        time: new Date().toLocaleTimeString()
-      };
-
-      socket.emit('sendMessage', messageData);
-      addMessage(messageData, true);
+      const msg = { from: myName, to: currentChatWith.name, text, type: 'text', time: new Date().toLocaleTimeString() };
+      socket.emit('sendMessage', msg);
+      addMessage(msg, true);
       input.value = '';
     }
 
     function addMessage(msg, isMine) {
       const div = document.createElement('div');
       div.className = `message ${isMine ? 'sent' : 'received'}`;
-      div.textContent = `${msg.from}: ${msg.text}`;
+      div.textContent = `${msg.from}: ${msg.text || '[Media]'}`;
       document.getElementById('messages').appendChild(div);
       document.getElementById('messages').scrollTop = 99999;
     }
@@ -116,10 +110,31 @@
       }
     });
 
-    // Audio & Video Calls (Basic)
+    // Voice Recording
+    async function toggleVoiceRecording() {
+      const btn = document.getElementById('recordBtn');
+      if (!mediaRecorder) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = () => {
+          const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+          // For now we show alert (later we can upload)
+          alert("Voice message recorded! (Upload feature coming next)");
+          audioChunks = [];
+        };
+        mediaRecorder.start();
+        btn.textContent = "⏹️ Stop";
+      } else {
+        mediaRecorder.stop();
+        mediaRecorder = null;
+        btn.textContent = "🎤";
+      }
+    }
+
     function startAudioCall() {
       if (!currentChatWith) return alert("Select a user first");
-      alert(`📞 Starting Audio Call with ${currentChatWith.name}...`);
+      alert(`📞 Starting Audio Call with ${currentChatWith.name}... (Full WebRTC coming soon)`);
     }
 
     function startVideoCall() {
@@ -127,7 +142,13 @@
       alert(`📹 Starting Video Call with ${currentChatWith.name}...`);
     }
 
-    // Enter key to send
+    // File Upload (Basic)
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        alert(`📁 File "${e.target.files[0].name}" selected. Upload feature in next update.`);
+      }
+    });
+
     document.getElementById('messageInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') sendMessage();
     });
