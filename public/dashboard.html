@@ -22,6 +22,13 @@
     .record-btn { background: #ef4444; }
     .upload-btn { background: #8b5cf6; }
     .call-btn { background: #4ade80; }
+    .user-item { padding: 12px; margin: 4px 0; border-radius: 8px; display: flex; align-items: center; gap: 10px; transition: background 0.2s; }
+    .user-item.clickable { cursor: pointer; }
+    .user-item.clickable:hover { background: #2d3f55; }
+    .user-item.self { background: #1a3a2a; cursor: default; }
+    .online-dot { width: 10px; height: 10px; background: #4ade80; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 6px #4ade80; }
+    .user-label { display: flex; flex-direction: column; gap: 2px; }
+    .user-status { font-size: 11px; color: #4ade80; }
   </style>
 </head>
 <body>
@@ -65,17 +72,20 @@
       const container = document.getElementById('onlineUsers');
       container.innerHTML = '';
       users.forEach(user => {
-        if (user.name !== myName) {
-          const div = document.createElement('div');
-          div.className = 'user-item';
-          div.style.padding = "12px";
-          div.style.margin = "4px 0";
-          div.style.borderRadius = "8px";
-          div.style.cursor = "pointer";
-          div.innerHTML = `<strong>${user.name}</strong>`;
+        const isSelf = user.name === myName;
+        const div = document.createElement('div');
+        div.className = `user-item ${isSelf ? 'self' : 'clickable'}`;
+        div.innerHTML = `
+          <span class="online-dot"></span>
+          <span class="user-label">
+            <strong>${user.name}${isSelf ? ' <span style="color:#94a3b8;font-weight:normal;font-size:12px;">(You)</span>' : ''}</strong>
+            <span class="user-status">● Active now</span>
+          </span>
+        `;
+        if (!isSelf) {
           div.onclick = () => startChat(user);
-          container.appendChild(div);
         }
+        container.appendChild(div);
       });
     });
 
