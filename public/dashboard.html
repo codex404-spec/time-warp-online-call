@@ -6,68 +6,258 @@
   <title>Time Warp - Chat</title>
   <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
   <style>
-    body { margin:0; font-family: Arial; background: #0f172a; color: white; }
-    .app { display: flex; height: 100vh; }
-    .sidebar { width: 320px; background: #1e2937; padding: 20px; border-right: 1px solid #334155; overflow-y: auto; }
-    .chat-area { flex: 1; display: flex; flex-direction: column; }
-    .header { padding: 15px; background: #1e2937; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; }
-    .messages { flex: 1; padding: 20px; overflow-y: auto; background: #0f172a; }
-    .message { margin: 10px 0; padding: 12px 16px; border-radius: 12px; max-width: 75%; position: relative; }
-    .sent { background: #22d3ee; color: black; margin-left: auto; }
-    .received { background: #334155; }
-    .input-area { padding: 15px; background: #1e2937; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-    input { flex: 1; padding: 14px; border: none; border-radius: 8px; }
-    button { padding: 12px 18px; border: none; border-radius: 8px; cursor: pointer; }
-    .send-btn { background: #22d3ee; color: black; }
-    .record-btn { background: #ef4444; }
-    .upload-btn { background: #8b5cf6; }
-    .call-btn { background: #4ade80; }
-    .user-item { padding: 12px; margin: 4px 0; border-radius: 8px; display: flex; align-items: center; gap: 10px; transition: background 0.2s; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body { font-family: 'Georgia', serif; background: #0a0e1a; color: #F5E6D3; overflow: hidden; }
+
+    /* ── Pixie Dust Canvas ── */
+    #pixie-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Layout ── */
+    .app { display: flex; height: 100vh; position: relative; z-index: 1; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 300px;
+      background: rgba(12, 16, 28, 0.92);
+      padding: 20px;
+      border-right: 1px solid rgba(245,230,211,0.1);
+      overflow-y: auto;
+      backdrop-filter: blur(8px);
+      flex-shrink: 0;
+    }
+    .sidebar h2 {
+      font-size: 1rem;
+      letter-spacing: 0.08em;
+      color: #E8DCC8;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+
+    /* ── Chat Area ── */
+    .chat-area { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+    .header {
+      padding: 14px 20px;
+      background: rgba(12, 16, 28, 0.92);
+      border-bottom: 1px solid rgba(245,230,211,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      backdrop-filter: blur(8px);
+    }
+    .header h2 { font-size: 1rem; letter-spacing: 0.04em; color: #E8DCC8; }
+
+    /* ── Messages ── */
+    .messages {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      background: transparent;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .messages::-webkit-scrollbar { width: 4px; }
+    .messages::-webkit-scrollbar-track { background: transparent; }
+    .messages::-webkit-scrollbar-thumb { background: rgba(245,230,211,0.15); border-radius: 4px; }
+
+    .message {
+      padding: 10px 15px;
+      border-radius: 12px;
+      max-width: 72%;
+      font-size: 0.92rem;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+    .sent {
+      background: #E8DCC8;
+      color: #0a0e1a;
+      margin-left: auto;
+      border-bottom-right-radius: 4px;
+    }
+    .received {
+      background: rgba(245,230,211,0.08);
+      border: 1px solid rgba(245,230,211,0.12);
+      color: #F5E6D3;
+      border-bottom-left-radius: 4px;
+    }
+
+    /* ── Input Area ── */
+    .input-area {
+      padding: 14px 16px;
+      background: rgba(12, 16, 28, 0.92);
+      border-top: 1px solid rgba(245,230,211,0.1);
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      backdrop-filter: blur(8px);
+    }
+    .input-area input {
+      flex: 1;
+      min-width: 120px;
+      padding: 12px 16px;
+      border: 1px solid rgba(245,230,211,0.2);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.05);
+      color: #F5E6D3;
+      font-size: 0.92rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .input-area input::placeholder { color: rgba(245,230,211,0.35); }
+    .input-area input:focus {
+      border-color: rgba(245,230,211,0.45);
+      box-shadow: 0 0 0 3px rgba(245,230,211,0.07);
+    }
+
+    /* ── Buttons ── */
+    button {
+      padding: 11px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: bold;
+      letter-spacing: 0.03em;
+      transition: opacity 0.2s, transform 0.1s, box-shadow 0.2s;
+    }
+    button:hover  { opacity: 0.88; transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+
+    .send-btn    { background: #E8DCC8; color: #0a0e1a; }
+    .send-btn:hover { background: #F5E6D3; box-shadow: 0 4px 16px rgba(245,230,211,0.2); opacity: 1; }
+    .record-btn  { background: #7f1d1d; color: #fca5a5; }
+    .upload-btn  { background: #3b1f6e; color: #c4b5fd; }
+    .call-btn    { background: #14532d; color: #86efac; }
+    .logout-btn  { background: #7f1d1d; color: #fca5a5; padding: 8px 16px; font-size: 0.82rem; }
+
+    /* ── User List ── */
+    .user-item {
+      padding: 11px 12px;
+      margin: 3px 0;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.2s;
+    }
     .user-item.clickable { cursor: pointer; }
-    .user-item.clickable:hover { background: #2d3f55; }
-    .user-item.self { background: #1a3a2a; cursor: default; }
-    .online-dot { width: 10px; height: 10px; background: #4ade80; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 6px #4ade80; }
+    .user-item.clickable:hover { background: rgba(245,230,211,0.07); }
+    .user-item.self { background: rgba(245,230,211,0.04); cursor: default; }
+
+    .online-dot {
+      width: 9px; height: 9px;
+      background: #86efac;
+      border-radius: 50%;
+      flex-shrink: 0;
+      box-shadow: 0 0 6px #86efac;
+    }
     .user-label { display: flex; flex-direction: column; gap: 2px; }
-    .user-status { font-size: 11px; color: #4ade80; }
+    .user-label strong { font-size: 0.9rem; color: #F5E6D3; }
+    .user-status { font-size: 10px; color: #86efac; letter-spacing: 0.03em; }
   </style>
 </head>
 <body>
+  <canvas id="pixie-canvas"></canvas>
+
   <div class="app">
     <div class="sidebar">
-      <h2>🟢 Online Users</h2>
+      <h2>✦ Online Users</h2>
       <div id="onlineUsers"></div>
     </div>
 
     <div class="chat-area">
       <div class="header">
         <h2 id="chatHeader">Select someone to chat</h2>
-        <div style="display:flex; align-items:center; gap:16px;">
-          <span>Welcome, <b id="myName"></b></span>
-          <button onclick="logout()" style="background:#ef4444; color:white; padding:8px 16px; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">Logout</button>
+        <div style="display:flex; align-items:center; gap:14px;">
+          <span style="font-size:0.88rem; color:rgba(245,230,211,0.7);">Welcome, <b style="color:#F5E6D3;" id="myName"></b></span>
+          <button class="logout-btn" onclick="logout()">Logout</button>
         </div>
       </div>
-      
+
       <div class="messages" id="messages"></div>
-      
+
       <div class="input-area">
-        <input type="text" id="messageInput" placeholder="Type a message..." />
-        <button class="send-btn" onclick="sendMessage()">Send</button>
-        <button class="record-btn" id="recordBtn" onclick="toggleVoiceRecording()">🎤</button>
-        <button class="upload-btn" onclick="document.getElementById('fileInput').click()">📎</button>
-        <button class="call-btn" onclick="startAudioCall()">🎙️ Call</button>
-        <button onclick="startVideoCall()" style="background:#f97316;">📹 Video</button>
+        <input type="text" id="messageInput" placeholder="Type a message…" />
+        <button class="send-btn"    onclick="sendMessage()">Send</button>
+        <button class="record-btn"  id="recordBtn" onclick="toggleVoiceRecording()">🎤</button>
+        <button class="upload-btn"  onclick="document.getElementById('fileInput').click()">📎</button>
+        <button class="call-btn"    onclick="startAudioCall()">🎙️ Call</button>
+        <button style="background:#7c2d12; color:#fdba74;" onclick="startVideoCall()">📹 Video</button>
       </div>
       <input type="file" id="fileInput" style="display:none" accept="image/*,video/*" />
     </div>
   </div>
 
   <script>
-    // Guard: redirect to login if no token is present
+    /* ── Pixie Dust ── */
+    (function initPixieDust() {
+      const canvas = document.getElementById('pixie-canvas');
+      const ctx = canvas.getContext('2d');
+      let W, H, particles = [];
+
+      function resize() {
+        W = canvas.width  = window.innerWidth;
+        H = canvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      function randomBetween(a, b) { return a + Math.random() * (b - a); }
+
+      function createParticle() {
+        return {
+          x:       randomBetween(0, W),
+          y:       randomBetween(-20, -2),
+          radius:  randomBetween(0.8, 2.2),
+          speed:   randomBetween(0.4, 1.2),
+          drift:   randomBetween(-0.3, 0.3),
+          opacity: randomBetween(0.5, 1.0),
+          fade:    randomBetween(0.003, 0.008),
+        };
+      }
+
+      const PARTICLE_COUNT = 90;
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        const p = createParticle();
+        p.y = randomBetween(0, H);
+        particles.push(p);
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, W, H);
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255, 255, 255, ${p.opacity})`;
+          ctx.fill();
+
+          p.y       += p.speed;
+          p.x       += p.drift;
+          p.opacity -= p.fade;
+
+          if (p.y > H + 10 || p.opacity <= 0) {
+            particles[i] = createParticle();
+          }
+        }
+        requestAnimationFrame(draw);
+      }
+      draw();
+    })();
+
+    /* ── Auth Guard ── */
     (function requireAuth() {
       const token = localStorage.getItem('token');
-      if (!token) {
-        window.location.replace('/login');
-      }
+      if (!token) window.location.replace('/login');
     })();
 
     function logout() {
@@ -95,13 +285,11 @@
         div.innerHTML = `
           <span class="online-dot"></span>
           <span class="user-label">
-            <strong>${user.name}${isSelf ? ' <span style="color:#94a3b8;font-weight:normal;font-size:12px;">(You)</span>' : ''}</strong>
+            <strong>${user.name}${isSelf ? ' <span style="color:rgba(245,230,211,0.4);font-weight:normal;font-size:11px;">(You)</span>' : ''}</strong>
             <span class="user-status">● Active now</span>
           </span>
         `;
-        if (!isSelf) {
-          div.onclick = () => startChat(user);
-        }
+        if (!isSelf) div.onclick = () => startChat(user);
         container.appendChild(div);
       });
     });
@@ -137,7 +325,6 @@
       }
     });
 
-    // Voice Recording
     async function toggleVoiceRecording() {
       const btn = document.getElementById('recordBtn');
       if (!mediaRecorder) {
@@ -146,7 +333,6 @@
         mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
         mediaRecorder.onstop = () => {
           const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-          // For now we show alert (later we can upload)
           alert("Voice message recorded! (Upload feature coming next)");
           audioChunks = [];
         };
@@ -169,7 +355,6 @@
       alert(`📹 Starting Video Call with ${currentChatWith.name}...`);
     }
 
-    // File Upload (Basic)
     document.getElementById('fileInput').addEventListener('change', (e) => {
       if (e.target.files.length > 0) {
         alert(`📁 File "${e.target.files[0].name}" selected. Upload feature in next update.`);
