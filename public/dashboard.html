@@ -163,6 +163,48 @@
     .user-label { display: flex; flex-direction: column; gap: 2px; }
     .user-label strong { font-size: 0.9rem; color: #F5E6D3; }
     .user-status { font-size: 10px; color: #86efac; letter-spacing: 0.03em; }
+
+    /* ── Call Modal ── */
+    .call-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(10, 14, 26, 0.95);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .call-modal.active { display: flex; }
+    .call-container {
+      width: 90%;
+      max-width: 1000px;
+      background: rgba(12, 16, 28, 0.95);
+      border-radius: 16px;
+      padding: 24px;
+      border: 1px solid rgba(245,230,211,0.1);
+    }
+    .videos-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .video-wrapper {
+      background: rgba(0,0,0,0.3);
+      border-radius: 12px;
+      aspect-ratio: 16/9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    video { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; }
+    .call-controls { display: flex; gap: 12px; justify-content: center; }
+    .end-call-btn { background: #7f1d1d; color: #fca5a5; padding: 12px 28px; }
+    .call-btn-small { background: rgba(245,230,211,0.1); color: #F5E6D3; }
   </style>
 </head>
 <body>
@@ -194,6 +236,25 @@
         <button class="send-btn" onclick="startVideoCall()">📹 Video</button>
       </div>
       <input type="file" id="fileInput" style="display:none" accept="image/*,video/*" />
+    </div>
+  </div>
+
+  <!-- Call Modal -->
+  <div class="call-modal" id="callModal">
+    <div class="call-container">
+      <div class="videos-container">
+        <div class="video-wrapper">
+          <video id="localVideo" autoplay muted playsinline></video>
+        </div>
+        <div class="video-wrapper">
+          <video id="remoteVideo" autoplay playsinline></video>
+        </div>
+      </div>
+      <div class="call-controls">
+        <button class="call-btn-small" id="toggleAudioBtn" onclick="toggleAudio()">🔊 Audio</button>
+        <button class="call-btn-small" id="toggleVideoBtn" onclick="toggleVideo()">📹 Video</button>
+        <button class="end-call-btn" onclick="endCall()">⏹️ End Call</button>
+      </div>
     </div>
   </div>
 
@@ -272,8 +333,20 @@
     let mediaRecorder;
     let audioChunks = [];
 
+    let localStream;
+    let remoteStream;
+    let peerConnection;
+    let mySocketId;
+    let isAudioEnabled = true;
+    let isVideoEnabled = true;
+    const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
     document.getElementById('myName').textContent = myName;
     socket.emit('login', { name: myName });
+
+    socket.on('connect', () => {
+      mySocketId = socket.id;
+    });
 
     socket.on('onlineUsers', (users) => {
       const container = document.getElementById('onlineUsers');
@@ -282,6 +355,7 @@
         const isSelf = user.name === myName;
         const div = document.createElement('div');
         div.className = `user-item ${isSelf ? 'self' : 'clickable'}`;
+        div.dataset.socketId = user.socketId;
         div.innerHTML = `
           <span class="online-dot"></span>
           <span class="user-label">
@@ -292,6 +366,37 @@
         if (!isSelf) div.onclick = () => startChat(user);
         container.appendChild(div);
       });
+    });
+
+    socket.on('offer', async (data) => {
+      if (!confirm(`${data.fromName} is calling! Accept?`)) {
+        socket.emit('endCall', { targetSocketId: data.fromSocketId });
+        return;
+      }
+      await startCall(false, data.callType, data.fromSocketId, data.fromName);
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+      socket.emit('answer', {
+        targetSocketId: data.fromSocketId,
+        answer,
+        fromName: myName,
+        fromSocketId: mySocketId
+      });
+    });
+
+    socket.on('answer', async (data) => {
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+    });
+
+    socket.on('iceCandidate', async (data) => {
+      if (data.candidate) {
+        await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+      }
+    });
+
+    socket.on('endCall', () => {
+      endCall();
     });
 
     function startChat(user) {
@@ -331,6 +436,21 @@
         audio.style.maxWidth = '100%';
         audio.style.height = '40px';
         div.appendChild(audio);
+      } else if (msg.type === 'image') {
+        const label = document.createElement('div');
+        label.textContent = `${msg.from}:`;
+        label.style.marginBottom = '6px';
+        label.style.fontSize = '0.82rem';
+        label.style.opacity = '0.8';
+        div.appendChild(label);
+        
+        const img = document.createElement('img');
+        img.src = msg.image;
+        img.style.maxWidth = '100%';
+        img.style.borderRadius = '8px';
+        img.style.cursor = 'pointer';
+        img.onclick = () => window.open(msg.image, '_blank');
+        div.appendChild(img);
       } else {
         div.textContent = `${msg.from}: ${msg.text || '[Media]'}`;
       }
@@ -378,19 +498,121 @@
       }
     }
 
+    async function startCall(isInitiator, callType, targetSocketId, targetName) {
+      const constraints = callType === 'video' 
+        ? { audio: true, video: true } 
+        : { audio: true, video: false };
+      
+      localStream = await navigator.mediaDevices.getUserMedia(constraints);
+      document.getElementById('localVideo').srcObject = localStream;
+      
+      remoteStream = new MediaStream();
+      document.getElementById('remoteVideo').srcObject = remoteStream;
+      
+      peerConnection = new RTCPeerConnection(config);
+      
+      localStream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, localStream);
+      });
+      
+      peerConnection.ontrack = (event) => {
+        event.streams[0].getTracks().forEach(track => {
+          remoteStream.addTrack(track);
+        });
+      };
+      
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit('iceCandidate', {
+            targetSocketId,
+            candidate: event.candidate,
+            fromSocketId: mySocketId
+          });
+        }
+      };
+      
+      if (isInitiator) {
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        socket.emit('offer', {
+          targetSocketId,
+          offer,
+          callType,
+          fromName: myName,
+          fromSocketId: mySocketId
+        });
+      }
+      
+      document.getElementById('callModal').classList.add('active');
+      isAudioEnabled = true;
+      isVideoEnabled = callType === 'video';
+    }
+
     function startAudioCall() {
-      if (!currentChatWith) return alert("Select a user first");
-      alert(`📞 Starting Audio Call with ${currentChatWith.name}... (Full WebRTC coming soon)`);
+      if (!currentChatWith || !currentChatWith.socketId) return alert("Select a user first");
+      startCall(true, 'audio', currentChatWith.socketId, currentChatWith.name);
     }
 
     function startVideoCall() {
-      if (!currentChatWith) return alert("Select a user first");
-      alert(`📹 Starting Video Call with ${currentChatWith.name}...`);
+      if (!currentChatWith || !currentChatWith.socketId) return alert("Select a user first");
+      startCall(true, 'video', currentChatWith.socketId, currentChatWith.name);
+    }
+
+    function toggleAudio() {
+      if (!localStream) return;
+      localStream.getAudioTracks().forEach(track => {
+        track.enabled = !track.enabled;
+      });
+      isAudioEnabled = !isAudioEnabled;
+      document.getElementById('toggleAudioBtn').textContent = isAudioEnabled ? '🔊 Audio' : '� Muted';
+    }
+
+    function toggleVideo() {
+      if (!localStream) return;
+      localStream.getVideoTracks().forEach(track => {
+        track.enabled = !track.enabled;
+      });
+      isVideoEnabled = !isVideoEnabled;
+      document.getElementById('toggleVideoBtn').textContent = isVideoEnabled ? '📹 Video' : '📵 Video Off';
+    }
+
+    function endCall() {
+      if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+      }
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+      }
+      if (remoteStream) {
+        remoteStream.getTracks().forEach(track => track.stop());
+        remoteStream = null;
+      }
+      document.getElementById('callModal').classList.remove('active');
+      
+      if (currentChatWith && currentChatWith.socketId) {
+        socket.emit('endCall', { targetSocketId: currentChatWith.socketId });
+      }
     }
 
     document.getElementById('fileInput').addEventListener('change', (e) => {
       if (e.target.files.length > 0) {
-        alert(`📁 File "${e.target.files[0].name}" selected. Upload feature in next update.`);
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const msg = {
+            from: myName,
+            to: currentChatWith ? currentChatWith.name : 'All',
+            image: reader.result,
+            type: 'image',
+            time: new Date().toLocaleTimeString()
+          };
+          socket.emit('sendMessage', msg);
+          addMessage(msg, true);
+        };
+        reader.readAsDataURL(file);
+        e.target.value = '';
       }
     });
 
