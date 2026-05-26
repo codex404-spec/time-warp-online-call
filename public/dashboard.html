@@ -71,7 +71,7 @@
     .message {
       padding: 10px 15px;
       border-radius: 12px;
-      max-width: 72%;
+      max-width: 85%;
       font-size: 0.92rem;
       line-height: 1.45;
       word-break: break-word;
@@ -316,11 +316,20 @@
       div.className = `message ${isMine ? 'sent' : 'received'}`;
       
       if (msg.type === 'audio') {
+        const label = document.createElement('div');
+        label.textContent = `${msg.from}:`;
+        label.style.marginBottom = '6px';
+        label.style.fontSize = '0.82rem';
+        label.style.opacity = '0.8';
+        div.appendChild(label);
+        
         const audio = document.createElement('audio');
         audio.controls = true;
         audio.src = msg.audio;
         audio.style.width = '100%';
-        audio.style.maxWidth = '280px';
+        audio.style.minWidth = '220px';
+        audio.style.maxWidth = '100%';
+        audio.style.height = '40px';
         div.appendChild(audio);
       } else {
         div.textContent = `${msg.from}: ${msg.text || '[Media]'}`;
