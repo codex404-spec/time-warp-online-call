@@ -5,24 +5,189 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Register - Time Warp</title>
   <style>
-    body { font-family: Arial; background: #0f172a; color: white; text-align: center; padding: 50px; }
-    input, button { padding: 12px; margin: 10px; width: 300px; border-radius: 8px; }
-    button { background: #22d3ee; color: black; font-weight: bold; cursor: pointer; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Georgia', serif;
+      background: #0a0e1a;
+      color: #F5E6D3;
+      text-align: center;
+      padding: 50px 20px;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* ── Pixie Dust Canvas ── */
+    #pixie-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Content sits above canvas ── */
+    .page-content { position: relative; z-index: 1; }
+
+    h1 {
+      font-size: 2rem;
+      letter-spacing: 0.08em;
+      color: #F5E6D3;
+      text-shadow: 0 0 18px rgba(245,230,211,0.25);
+      margin-bottom: 36px;
+    }
+
+    .card {
+      background: rgba(15, 18, 30, 0.75);
+      border: 1px solid rgba(245,230,211,0.15);
+      border-radius: 16px;
+      padding: 40px 32px;
+      max-width: 380px;
+      margin: 0 auto;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      letter-spacing: 0.06em;
+      color: #E8DCC8;
+      margin-bottom: 24px;
+    }
+
+    input {
+      display: block;
+      padding: 13px 16px;
+      margin: 10px auto;
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid rgba(245,230,211,0.2);
+      background: rgba(255,255,255,0.05);
+      color: #F5E6D3;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input::placeholder { color: rgba(245,230,211,0.4); }
+    input:focus {
+      border-color: rgba(245,230,211,0.55);
+      box-shadow: 0 0 0 3px rgba(245,230,211,0.08);
+    }
+
+    button {
+      display: block;
+      padding: 13px;
+      margin: 18px auto 0;
+      width: 100%;
+      border-radius: 8px;
+      border: none;
+      background: #E8DCC8;
+      color: #0a0e1a;
+      font-weight: bold;
+      font-size: 0.95rem;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+    }
+    button:hover {
+      background: #F5E6D3;
+      box-shadow: 0 4px 20px rgba(245,230,211,0.25);
+      transform: translateY(-1px);
+    }
+    button:active { transform: translateY(0); }
+
+    p {
+      margin-top: 20px;
+      font-size: 0.88rem;
+      color: rgba(245,230,211,0.6);
+    }
+    p a {
+      color: #E8DCC8;
+      font-weight: bold;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(232,220,200,0.4);
+      transition: color 0.2s, border-color 0.2s;
+    }
+    p a:hover { color: #F5E6D3; border-color: #F5E6D3; }
   </style>
 </head>
 <body>
-  <h1>Time Warp Online Call</h1>
-  <h2>Create Account</h2>
-  <input type="text" id="name" placeholder="Full Name" /><br>
-  <input type="email" id="email" placeholder="Email" /><br>
-  <input type="password" id="password" placeholder="Password" /><br>
-  <button onclick="register()">Register</button>
-  <p>Already have account? <a href="/login" style="color:#22d3ee">Login</a></p>
+  <canvas id="pixie-canvas"></canvas>
+
+  <div class="page-content">
+    <h1>✦ Time Warp Online Call</h1>
+    <div class="card">
+      <h2>Create Account</h2>
+      <input type="text"     id="name"     placeholder="Full Name" />
+      <input type="email"    id="email"    placeholder="Email" />
+      <input type="password" id="password" placeholder="Password" />
+      <button onclick="register()">Register</button>
+      <p>Already have an account? <a href="/login">Login</a></p>
+    </div>
+  </div>
 
   <script>
+    /* ── Pixie Dust ── */
+    (function initPixieDust() {
+      const canvas = document.getElementById('pixie-canvas');
+      const ctx = canvas.getContext('2d');
+      let W, H, particles = [];
+
+      function resize() {
+        W = canvas.width  = window.innerWidth;
+        H = canvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      function randomBetween(a, b) { return a + Math.random() * (b - a); }
+
+      function createParticle() {
+        return {
+          x:       randomBetween(0, W),
+          y:       randomBetween(-20, -2),
+          radius:  randomBetween(0.8, 2.2),
+          speed:   randomBetween(0.4, 1.2),
+          drift:   randomBetween(-0.3, 0.3),
+          opacity: randomBetween(0.5, 1.0),
+          fade:    randomBetween(0.003, 0.008),
+        };
+      }
+
+      const PARTICLE_COUNT = 90;
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        const p = createParticle();
+        p.y = randomBetween(0, H);
+        particles.push(p);
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, W, H);
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255, 255, 255, ${p.opacity})`;
+          ctx.fill();
+
+          p.y       += p.speed;
+          p.x       += p.drift;
+          p.opacity -= p.fade;
+
+          if (p.y > H + 10 || p.opacity <= 0) {
+            particles[i] = createParticle();
+          }
+        }
+        requestAnimationFrame(draw);
+      }
+      draw();
+    })();
+
+    /* ── Register ── */
     async function register() {
-      const name = document.getElementById('name').value;
-      const email = document.getElementById('email').value;
+      const name     = document.getElementById('name').value;
+      const email    = document.getElementById('email').value;
       const password = document.getElementById('password').value;
 
       const res = await fetch('/api/register', {
