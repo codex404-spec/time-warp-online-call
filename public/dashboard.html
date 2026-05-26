@@ -400,9 +400,10 @@
     });
 
     function startChat(user) {
-      currentChatWith = user;
+      currentChatWith = { ...user, socketId: user.socketId };
       document.getElementById('chatHeader').textContent = `💬 ${user.name}`;
       document.getElementById('messages').innerHTML = '';
+      console.log('Current chat with:', currentChatWith);
     }
 
     function sendMessage() {
