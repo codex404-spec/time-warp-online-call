@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
 import { createServer } from 'http';
+import { OpenAI } from 'openai';
 
 dotenv.config();
 
@@ -74,7 +75,6 @@ app.post('/api/login', (req, res) => {
 app.post('/api/chat', authenticate, async (req, res) => {
   try {
     const { message } = req.body;
-    const { OpenAI } = await import('openai');
     
     const deepseek = new OpenAI({
       apiKey: process.env.DEEPSEEK_API_KEY,
@@ -101,12 +101,28 @@ io.on('connection', (socket) => {
   console.log('🔌 User connected:', socket.id);
 
   socket.on('login', (userData) => {
-    onlineUsers.set(socket.id, userData);
+    onlineUsers.set(socket.id, { ...userData, socketId: socket.id });
     io.emit('onlineUsers', Array.from(onlineUsers.values()));
   });
 
   socket.on('sendMessage', (messageData) => {
     io.emit('receiveMessage', messageData);
+  });
+
+  socket.on('offer', (data) => {
+    io.to(data.targetSocketId).emit('offer', data);
+  });
+
+  socket.on('answer', (data) => {
+    io.to(data.targetSocketId).emit('answer', data);
+  });
+
+  socket.on('iceCandidate', (data) => {
+    io.to(data.targetSocketId).emit('iceCandidate', data);
+  });
+
+  socket.on('endCall', (data) => {
+    io.to(data.targetSocketId).emit('endCall', data);
   });
 
   socket.on('disconnect', () => {

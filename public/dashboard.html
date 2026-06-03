@@ -150,7 +150,8 @@
       transition: background 0.2s;
     }
     .user-item.clickable { cursor: pointer; }
-    .user-item.clickable:hover { background: rgba(245,230,211,0.07); }
+    .user-item.clickable:hover, .user-item.active-chat { background: rgba(245,230,211,0.07); }
+    .user-item.active-chat { border-left: 3px solid #E8DCC8; background: rgba(245,230,211,0.12); }
     .user-item.self { background: rgba(245,230,211,0.04); cursor: default; }
 
     .online-dot {
@@ -232,8 +233,8 @@
         <button class="send-btn"    onclick="sendMessage()">Send</button>
         <button class="record-btn"  id="recordBtn" onclick="toggleVoiceRecording()">🎤</button>
         <button class="upload-btn"  onclick="document.getElementById('fileInput').click()">📎</button>
-        <button class="call-btn"    onclick="startAudioCall()">🎙️ Call</button>
-        <button class="send-btn" onclick="startVideoCall()">📹 Video</button>
+        <button class="call-btn"    id="audioCallBtn" onclick="startAudioCall()">🎙️ Call</button>
+        <button class="send-btn"    id="videoCallBtn" onclick="startVideoCall()">📹 Video</button>
       </div>
       <input type="file" id="fileInput" style="display:none" accept="image/*,video/*" />
     </div>
@@ -328,7 +329,9 @@
     }
 
     const socket = io();
-    let currentChatWith = null;
+    const GLOBAL_CHAT = { name: "Global Chat", socketId: "all" };
+    const AI_ASSISTANT = { name: "AI Assistant", socketId: "ai" };
+    let currentChatWith = GLOBAL_CHAT;
     let myName = localStorage.getItem('name') || "You";
     let mediaRecorder;
     let audioChunks = [];
@@ -343,6 +346,7 @@
 
     document.getElementById('myName').textContent = myName;
     socket.emit('login', { name: myName });
+    startChat(GLOBAL_CHAT);
 
     socket.on('connect', () => {
       mySocketId = socket.id;
@@ -351,10 +355,45 @@
     socket.on('onlineUsers', (users) => {
       const container = document.getElementById('onlineUsers');
       container.innerHTML = '';
+
+      // 1. Add Global Chat item
+      const globalDiv = document.createElement('div');
+      globalDiv.dataset.name = 'Global Chat';
+      globalDiv.className = `user-item clickable ${currentChatWith && currentChatWith.name === 'Global Chat' ? 'active-chat' : ''}`;
+      globalDiv.innerHTML = `
+        <span class="online-dot" style="background:#60a5fa; box-shadow:0 0 6px #60a5fa;"></span>
+        <span class="user-label">
+          <strong>Global Chat</strong>
+          <span class="user-status" style="color:#60a5fa;">Public room</span>
+        </span>
+      `;
+      globalDiv.onclick = () => {
+        startChat(GLOBAL_CHAT);
+      };
+      container.appendChild(globalDiv);
+
+      // 2. Add AI Assistant item
+      const aiDiv = document.createElement('div');
+      aiDiv.dataset.name = 'AI Assistant';
+      aiDiv.className = `user-item clickable ${currentChatWith && currentChatWith.name === 'AI Assistant' ? 'active-chat' : ''}`;
+      aiDiv.innerHTML = `
+        <span class="online-dot" style="background:#a78bfa; box-shadow:0 0 6px #a78bfa;"></span>
+        <span class="user-label">
+          <strong>AI Assistant</strong>
+          <span class="user-status" style="color:#a78bfa;">Always online</span>
+        </span>
+      `;
+      aiDiv.onclick = () => {
+        startChat(AI_ASSISTANT);
+      };
+      container.appendChild(aiDiv);
+
+      // 3. Add other online users
       users.forEach(user => {
-        const isSelf = user.name === myName;
+        const isSelf = user.socketId === mySocketId;
         const div = document.createElement('div');
-        div.className = `user-item ${isSelf ? 'self' : 'clickable'}`;
+        div.dataset.name = user.name;
+        div.className = `user-item ${isSelf ? 'self' : 'clickable'} ${currentChatWith && currentChatWith.name === user.name ? 'active-chat' : ''}`;
         div.dataset.socketId = user.socketId;
         div.innerHTML = `
           <span class="online-dot"></span>
@@ -363,7 +402,11 @@
             <span class="user-status">● Active now</span>
           </span>
         `;
-        if (!isSelf) div.onclick = () => startChat(user);
+        if (!isSelf) {
+          div.onclick = () => {
+            startChat(user);
+          };
+        }
         container.appendChild(div);
       });
     });
@@ -404,17 +447,97 @@
       document.getElementById('chatHeader').textContent = `💬 ${user.name}`;
       document.getElementById('messages').innerHTML = '';
       console.log('Current chat with:', currentChatWith);
+
+      // Update active chat styling
+      document.querySelectorAll('.user-item').forEach(el => {
+        el.classList.remove('active-chat');
+        if (el.dataset.name === user.name) {
+          el.classList.add('active-chat');
+        }
+      });
+
+      // Show/hide A/V call buttons for pseudo-users
+      const isPeer = user.socketId !== 'all' && user.socketId !== 'ai';
+      const audioBtn = document.getElementById('audioCallBtn');
+      const videoBtn = document.getElementById('videoCallBtn');
+      if (audioBtn) audioBtn.style.display = isPeer ? 'inline-block' : 'none';
+      if (videoBtn) videoBtn.style.display = isPeer ? 'inline-block' : 'none';
     }
 
-    function sendMessage() {
+    async function sendMessage() {
       const input = document.getElementById('messageInput');
       const text = input.value.trim();
       if (!text || !currentChatWith) return;
 
-      const msg = { from: myName, to: currentChatWith.name, text, type: 'text', time: new Date().toLocaleTimeString() };
-      socket.emit('sendMessage', msg);
-      addMessage(msg, true);
-      input.value = '';
+      const msg = { 
+        from: myName, 
+        to: currentChatWith.name, 
+        text, 
+        type: 'text', 
+        time: new Date().toLocaleTimeString() 
+      };
+
+      if (currentChatWith.name === 'AI Assistant') {
+        addMessage(msg, true);
+        input.value = '';
+
+        const messagesContainer = document.getElementById('messages');
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'message received';
+        loadingDiv.id = 'ai-loading';
+        loadingDiv.textContent = 'AI Assistant is thinking...';
+        messagesContainer.appendChild(loadingDiv);
+        messagesContainer.scrollTop = 99999;
+
+        try {
+          const token = localStorage.getItem('token');
+          const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ message: text })
+          });
+          const data = await res.json();
+          
+          const el = document.getElementById('ai-loading');
+          if (el) el.remove();
+
+          if (data.reply) {
+            addMessage({
+              from: 'AI Assistant',
+              to: myName,
+              text: data.reply,
+              type: 'text',
+              time: new Date().toLocaleTimeString()
+            }, false);
+          } else {
+            addMessage({
+              from: 'AI Assistant',
+              to: myName,
+              text: data.error || 'Sorry, I couldn\'t process that.',
+              type: 'text',
+              time: new Date().toLocaleTimeString()
+            }, false);
+          }
+        } catch (error) {
+          const el = document.getElementById('ai-loading');
+          if (el) el.remove();
+
+          addMessage({
+            from: 'AI Assistant',
+            to: myName,
+            text: 'An error occurred while communicating with the AI Assistant.',
+            type: 'text',
+            time: new Date().toLocaleTimeString()
+          }, false);
+        }
+      } else {
+        socket.emit('sendMessage', msg);
+        addMessage(msg, true);
+        input.value = '';
+      }
     }
 
     function addMessage(msg, isMine) {
@@ -461,8 +584,13 @@
     }
 
     socket.on('receiveMessage', (msg) => {
-      if (currentChatWith && msg.from === currentChatWith.name) {
-        addMessage(msg, false);
+      if (currentChatWith) {
+        const isGlobalMsg = msg.to === 'Global Chat' || msg.to === 'All';
+        if (currentChatWith.name === 'Global Chat' && isGlobalMsg && msg.from !== myName) {
+          addMessage(msg, false);
+        } else if (currentChatWith.name === msg.from && (msg.to === myName || !msg.to)) {
+          addMessage(msg, false);
+        }
       }
     });
 

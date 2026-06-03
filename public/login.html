@@ -192,6 +192,12 @@
         window.location.replace('/dashboard');
       } else {
         document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('email').addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') login();
+        });
+        document.getElementById('password').addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') login();
+        });
       }
     })();
 

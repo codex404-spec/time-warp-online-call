@@ -185,6 +185,18 @@
     })();
 
     /* ── Register ── */
+    (function initRegisterListeners() {
+      const inputs = ['name', 'email', 'password'];
+      inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') register();
+          });
+        }
+      });
+    })();
+
     async function register() {
       const name     = document.getElementById('name').value;
       const email    = document.getElementById('email').value;
