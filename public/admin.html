@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - Time Warp</title>
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <style>
+    body { font-family: 'Georgia', serif; background: #0a0e1a; color: #F5E6D3; padding: 20px; }
+    .container { max-width: 800px; margin: 0 auto; background: rgba(12,16,28,0.95); padding: 30px; border-radius: 16px; border: 1px solid rgba(245,230,211,0.1); }
+    input, select, button, textarea { width: 100%; padding: 12px; margin: 10px 0; background: rgba(255,255,255,0.05); border: 1px solid rgba(245,230,211,0.2); color: #F5E6D3; border-radius: 8px; }
+    button { background: #E8DCC8; color: #0a0e1a; font-weight: bold; cursor: pointer; }
+    button:hover { background: #F5E6D3; }
+    .poll { margin: 20px 0; padding: 15px; background: rgba(245,230,211,0.05); border-radius: 8px; }
+    .results { margin-top: 20px; }
+    .logout-btn { background: #7f1d1d; color: #fca5a5; padding: 10px 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>⚡ Admin Panel</h1>
+    <button onclick="logout()" class="logout-btn">Logout</button>
+
+    <h2>Create New Vote Poll</h2>
+    <input type="text" id="pollQuestion" placeholder="Poll Question (e.g. Best Player in Valorant)">
+    <input type="text" id="pollGame" placeholder="Game Name (optional)">
+    
+    <h3>Options (one per line)</h3>
+    <textarea id="pollOptions" rows="6" placeholder="Player1\nPlayer2\nPlayer3"></textarea>
+    
+    <button onclick="createPoll()">🚀 Create & Broadcast Poll</button>
+
+    <div id="currentPoll" class="poll" style="display:none;">
+      <h3>Active Poll</h3>
+      <div id="pollDisplay"></div>
+      <button onclick="closePoll()">Close Poll & Announce Results</button>
+    </div>
+
+    <div id="results" class="results"></div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('token');
+    if (!token) window.location.replace('/login');
+
+    function logout() {
+      localStorage.clear();
+      window.location.replace('/login');
+    }
+
+    async function createPoll() {
+      const question = document.getElementById('pollQuestion').value.trim();
+      const game = document.getElementById('pollGame').value.trim();
+      const optionsText = document.getElementById('pollOptions').value.trim();
+      
+      if (!question || !optionsText) return alert("Question and options required");
+
+      const options = optionsText.split('\n').map(o => o.trim()).filter(o => o);
+
+      const res = await fetch('/api/admin/poll', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ question, game, options })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        alert("Poll created and broadcasted!");
+        document.getElementById('currentPoll').style.display = 'block';
+        document.getElementById('pollDisplay').innerHTML = `<strong>${question}</strong><br>Options: ${options.join(', ')}`;
+      }
+    }
+
+    async function closePoll() {
+      const res = await fetch('/api/admin/close-poll', {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('results').innerHTML = `<h3>✅ Poll Closed! Results announced to all users.</h3>`;
+        setTimeout(() => window.location.reload(), 2000);
+      }
+    }
+  </script>
+</body>
+</html>
