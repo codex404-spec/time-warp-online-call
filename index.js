@@ -27,7 +27,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 const users = new Map();           // email -> user info
 const onlineUsers = new Map();     // socket.id -> user info
 let activePoll = null;
-let leaderboard = []; // [{name, points, rank, year}]
+let leaderboard = []; 
 
 // Authentication Middleware
 const authenticate = (req, res, next) => {
@@ -57,7 +57,7 @@ app.post('/api/register', (req, res) => {
   const { name, email, password } = req.body;
   if (users.has(email)) return res.status(400).json({ error: "User already exists" });
   
-  const isAdminUser = email.includes('admin') || name.toLowerCase() === 'admin';
+  const isAdminUser = email.toLowerCase().includes('admin') || name.toLowerCase() === 'admin';
   users.set(email, { name, password, isAdmin: isAdminUser });
   res.json({ success: true, message: "Account created!" });
 });
@@ -70,8 +70,19 @@ app.post('/api/login', (req, res) => {
     return res.status(401).json({ error: "Invalid email or password" });
   }
 
-  const token = jwt.sign({ email, name: user.name, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: '7d' });
-  res.json({ success: true, token, name: user.name, isAdmin: user.isAdmin });
+  const token = jwt.sign({ 
+    email, 
+    name: user.name, 
+    isAdmin: user.isAdmin 
+  }, JWT_SECRET, { expiresIn: '7d' });
+
+  res.json({ 
+    success: true, 
+    token, 
+    name: user.name, 
+    email: email,           // ← Fixed: Now saves email
+    isAdmin: user.isAdmin 
+  });
 });
 
 // ====================== POLL & LEADERBOARD API ======================
@@ -108,7 +119,6 @@ app.post('/api/admin/close-poll', authenticate, (req, res) => {
     results[vote] = (results[vote] || 0) + 1;
   });
 
-  // Update leaderboard (simple points system)
   const sorted = Object.entries(results).sort((a,b) => b[1] - a[1]);
   sorted.forEach(([player, votes], index) => {
     const existing = leaderboard.find(l => l.name === player);
@@ -130,7 +140,7 @@ app.get('/api/leaderboard', (req, res) => {
   res.json(leaderboard.slice(0, 10));
 });
 
-// AI Chat API (unchanged)
+// AI Chat API
 app.post('/api/chat', authenticate, async (req, res) => {
   try {
     const { message } = req.body;
