@@ -8,121 +8,43 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { 
-      font-family: 'Georgia', serif; 
-      background: #0a0e1a; 
-      color: #F5E6D3; 
-      overflow: hidden; 
-    }
+    body { font-family: 'Georgia', serif; background: #0a0e1a; color: #F5E6D3; overflow: hidden; }
 
-    #pixie-canvas {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0;
-    }
+    #pixie-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
 
     .app { display: flex; height: 100vh; position: relative; z-index: 1; }
 
-    .nav-sidebar {
-      width: 240px;
-      background: rgba(12, 16, 28, 0.98);
-      padding: 24px 12px;
-      border-right: 1px solid rgba(245,230,211,0.1);
-      display: flex;
-      flex-direction: column;
-    }
-
-    .nav-item {
-      padding: 14px 20px;
-      margin: 4px 8px;
-      border-radius: 12px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      color: #E8DCC8;
-      transition: all 0.2s;
-    }
-    .nav-item:hover, .nav-item.active {
-      background: rgba(245,230,211,0.12);
-      color: #F5E6D3;
-    }
-    .nav-item.active { background: rgba(245,230,211,0.18); font-weight: bold; }
+    .nav-sidebar { width: 240px; background: rgba(12,16,28,0.98); padding: 24px 12px; border-right: 1px solid rgba(245,230,211,0.1); display: flex; flex-direction: column; }
+    .nav-item { padding: 14px 20px; margin: 4px 8px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: #E8DCC8; transition: all 0.2s; }
+    .nav-item:hover, .nav-item.active { background: rgba(245,230,211,0.18); color: #F5E6D3; }
 
     .main-content { display: flex; flex: 1; }
-
-    .main-sidebar {
-      width: 300px;
-      background: rgba(12, 16, 28, 0.95);
-      padding: 20px;
-      border-right: 1px solid rgba(245,230,211,0.1);
-      overflow-y: auto;
-    }
-
+    .main-sidebar { width: 300px; background: rgba(12,16,28,0.95); padding: 20px; border-right: 1px solid rgba(245,230,211,0.1); overflow-y: auto; }
     .chat-area { flex: 1; display: flex; flex-direction: column; }
 
-    .header {
-      padding: 16px 24px;
-      background: rgba(12, 16, 28, 0.95);
-      border-bottom: 1px solid rgba(245,230,211,0.1);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+    .header { padding: 16px 24px; background: rgba(12,16,28,0.95); border-bottom: 1px solid rgba(245,230,211,0.1); display: flex; justify-content: space-between; align-items: center; }
 
-    .glass {
-      background: rgba(245,230,211,0.04);
-      border: 1px solid rgba(245,230,211,0.1);
-      border-radius: 16px;
-    }
+    .glass { background: rgba(245,230,211,0.04); border: 1px solid rgba(245,230,211,0.1); border-radius: 16px; }
+    .message { padding: 12px 16px; margin: 8px 0; border-radius: 12px; max-width: 75%; position: relative; }
+    .sent { background: #E8DCC8; color: #0a0e1a; margin-left: auto; border-bottom-right-radius: 4px; }
+    .received { background: rgba(245,230,211,0.1); border: 1px solid rgba(245,230,211,0.2); margin-right: auto; }
 
-    .leaderboard-item, .poll-option {
-      padding: 12px 16px;
-      margin: 8px 0;
-      border-radius: 12px;
-      background: rgba(245,230,211,0.06);
-      cursor: pointer;
-      transition: 0.2s;
-    }
-    .poll-option:hover { background: rgba(245,230,211,0.15); }
+    .reaction { display: inline-block; margin: 4px 2px; cursor: pointer; font-size: 1.2rem; }
+    .typing { font-style: italic; opacity: 0.7; font-size: 0.9rem; }
 
-    button {
-      padding: 12px 20px;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    .send-btn, .record-btn, .call-btn { background: #E8DCC8; color: #0a0e1a; }
-    .logout-btn { background: #7f1d1d; color: #fca5a5; }
-    .admin-btn { background: #5c3311; color: #F5E6D3; }
-
-    /* Secret Key Button */
-    .secret-key {
-      position: fixed;
-      bottom: 25px;
-      left: 25px;
-      z-index: 1000;
-      opacity: 0.15;
-      transition: all 0.4s ease;
-      padding: 14px;
-      background: rgba(12,16,28,0.85);
-      border-radius: 50%;
-      border: 2px solid #E8DCC8;
-      cursor: pointer;
-    }
-    .secret-key:hover {
-      opacity: 1;
-      transform: scale(1.15);
-    }
+    button { padding: 12px 20px; border: none; border-radius: 12px; cursor: pointer; font-weight: bold; }
+    .send-btn { background: #E8DCC8; color: #0a0e1a; }
+    .secret-key { position: fixed; bottom: 25px; left: 25px; z-index: 1000; opacity: 0.15; transition: all 0.4s; padding: 14px; background: rgba(12,16,28,0.85); border-radius: 50%; border: 2px solid #E8DCC8; cursor: pointer; }
+    .secret-key:hover { opacity: 1; transform: scale(1.15); }
   </style>
 </head>
 <body>
   <canvas id="pixie-canvas"></canvas>
   
   <div class="app">
-    <!-- Navigation Sidebar -->
+    <!-- Nav Sidebar -->
     <div class="nav-sidebar">
       <h2 style="color:#E8DCC8; padding: 0 16px 20px; font-size:1.4rem;">✦ Time Warp</h2>
-      
       <div onclick="switchTab(0)" class="nav-item active"><i class="fas fa-home"></i> Home</div>
       <div onclick="switchTab(1)" class="nav-item"><i class="fas fa-trophy"></i> Leaderboard</div>
       <div onclick="switchTab(2)" class="nav-item"><i class="fas fa-gamepad"></i> Games</div>
@@ -133,70 +55,38 @@
       </div>
     </div>
 
-    <!-- Main Content Area -->
+    <!-- Main Content -->
     <div class="main-content">
+      <!-- Chat Area -->
       <div id="homePanel" class="chat-area flex-1 flex flex-col">
         <div class="header">
-          <h2 id="chatHeader">Select someone to chat</h2>
+          <h2 id="chatHeader">Global Chat</h2>
           <div>Welcome, <b id="myName"></b></div>
         </div>
         <div id="messages" class="flex-1 p-6 overflow-y-auto"></div>
         <div class="p-4 border-t border-white/10 bg-[#0a0e1a]">
+          <div id="typingIndicator" class="typing mb-2"></div>
           <div class="flex gap-3">
-            <input type="text" id="messageInput" class="flex-1 bg-transparent border border-[#E8DCC8]/30 rounded-2xl px-5 py-4 focus:outline-none text-[#F5E6D3]" placeholder="Type a message...">
+            <input type="text" id="messageInput" class="flex-1 bg-transparent border border-[#E8DCC8]/30 rounded-2xl px-5 py-4 focus:outline-none" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMessage()">
             <button onclick="sendMessage()" class="send-btn">Send</button>
           </div>
         </div>
       </div>
 
-      <div id="leaderboardPanel" class="hidden flex-1 flex-col main-sidebar">
-        <h2 class="text-[#E8DCC8] text-xl mb-6">🏆 Leaderboard</h2>
-        <div id="leaderboard" class="space-y-3"></div>
-      </div>
-
-      <div id="pollsPanel" class="hidden flex-1 flex-col main-sidebar">
-        <h2 class="text-[#E8DCC8] text-xl mb-6">🎮 Games</h2>
-        <div class="glass p-6">
-          <h3 class="text-lg mb-3">Yuta Abe Experience</h3>
-          <button onclick="openGame()" class="w-full py-5 bg-[#E8DCC8] text-[#0a0e1a] font-bold rounded-2xl">▶️ Play Game</button>
-        </div>
-        <div class="mt-10">
-          <h3 class="text-[#E8DCC8] mb-4">🗳️ Active Poll</h3>
-          <div id="activePoll" class="space-y-4"></div>
-        </div>
-      </div>
+      <!-- Other Panels (Leaderboard & Games) -->
+      <div id="leaderboardPanel" class="hidden flex-1 flex-col main-sidebar">...</div>
+      <div id="pollsPanel" class="hidden flex-1 flex-col main-sidebar">...</div>
     </div>
   </div>
 
-  <!-- Secret Admin Key -->
-  <div class="secret-key" onclick="showAdminQuickLogin()" title="Admin Quick Login">
+  <!-- Secret Key -->
+  <div class="secret-key" onclick="showAdminQuickLogin()" title="Quick Admin Login">
     <i class="fas fa-key"></i>
   </div>
 
-  <!-- Quick Admin Login Modal -->
-  <div id="adminLoginModal" class="hidden fixed inset-0 bg-black/90 z-[2000] flex items-center justify-center">
-    <div class="glass p-8 rounded-3xl w-full max-w-md">
-      <h3 class="text-xl mb-6 text-center">🔑 Admin Quick Login</h3>
-      <input type="email" id="adminEmail" value="admin_x" placeholder="Admin Email" class="w-full p-4 mb-4 bg-transparent border border-[#E8DCC8]/30 rounded-2xl">
-      <input type="password" id="adminPassword" value="lanre@132009" placeholder="Password" class="w-full p-4 mb-6 bg-transparent border border-[#E8DCC8]/30 rounded-2xl">
-      <button onclick="quickAdminLogin()" class="w-full py-4 bg-[#E8DCC8] text-[#0a0e1a] font-bold rounded-2xl">Login as Admin</button>
-      <button onclick="hideAdminQuickLogin()" class="w-full mt-3 py-4 border border-[#E8DCC8]/50 text-[#E8DCC8] rounded-2xl">Cancel</button>
-    </div>
-  </div>
-
-  <!-- Game Modal -->
-  <div id="gameModal" class="hidden fixed inset-0 bg-black z-[100] flex flex-col">
-    <div style="background: rgba(12,16,28,0.98); padding: 16px 24px; border-bottom: 1px solid rgba(245,230,211,0.1); display:flex; justify-content:space-between;">
-      <button onclick="closeGame()" style="color:#E8DCC8;">← Back</button>
-      <span>Yuta Abe Experience</span>
-      <button onclick="closeGame()" style="color:#E8DCC8;">✕</button>
-    </div>
-    <iframe id="gameFrame" class="flex-1" allowfullscreen></iframe>
-  </div>
-
   <script>
-    // Pixie Dust + All previous logic...
-    (function initPixieDust() { /* same pixie dust code as before */ })();
+    // Pixie Dust (same as before)
+    (function initPixieDust() { /* ... */ })();
 
     const token = localStorage.getItem('token');
     const myName = localStorage.getItem('name');
@@ -205,54 +95,35 @@
     document.getElementById('myName').textContent = myName;
     if (localStorage.getItem('isAdmin') === 'true') document.getElementById('adminBtn').classList.remove('hidden');
 
-    function logout() { localStorage.clear(); window.location.replace('/login'); }
-    function goToAdmin() { window.location.href = '/admin'; }
-
-    function showAdminQuickLogin() {
-      document.getElementById('adminLoginModal').classList.remove('hidden');
-    }
-    function hideAdminQuickLogin() {
-      document.getElementById('adminLoginModal').classList.add('hidden');
-    }
-
-    async function quickAdminLogin() {
-      const email = document.getElementById('adminEmail').value;
-      const password = document.getElementById('adminPassword').value;
-
-      try {
-        const res = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('name', data.name);
-          localStorage.setItem('email', data.email);
-          localStorage.setItem('isAdmin', data.isAdmin);
-          hideAdminQuickLogin();
-          alert("✅ Admin Login Successful!");
-          window.location.reload();
-        } else {
-          alert("❌ Login Failed");
-        }
-      } catch (e) {
-        alert("Error connecting to server");
-      }
-    }
-
-    // Socket, Tabs, Game, Leaderboard, Poll functions...
     const socket = io();
     socket.emit('login', { name: myName });
 
-    function switchTab(tab) { /* same as previous */ }
-    function openGame() { document.getElementById('gameModal').classList.remove('hidden'); document.getElementById('gameFrame').src = "https://yutaabe.com/"; }
-    function closeGame() { document.getElementById('gameModal').classList.add('hidden'); document.getElementById('gameFrame').src = ''; }
+    let currentChat = 'global';
 
-    // Add your other functions (loadLeaderboard, sendMessage, etc.)
-    loadLeaderboard();
-  </script>
-</body>
-</html>
+    // Typing
+    let typingTimeout;
+    document.getElementById('messageInput').addEventListener('input', () => {
+      socket.emit('typing', { name: myName });
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => socket.emit('stopTyping'), 1500);
+    });
+
+    socket.on('userTyping', data => {
+      if (data.name !== myName) document.getElementById('typingIndicator').textContent = `${data.name} is typing...`;
+    });
+    socket.on('userStopTyping', () => document.getElementById('typingIndicator').textContent = '');
+
+    // Send Message
+    function sendMessage() {
+      const input = document.getElementById('messageInput');
+      if (!input.value.trim()) return;
+
+      const msg = { name: myName, text: input.value, time: Date.now() };
+      socket.emit('sendMessage', msg);
+      addMessage(msg, true);
+      input.value = '';
+    }
+
+    function addMessage(msg, isMine) {
+      const div = document.createElement('div');
+      div.className = `message ${is
