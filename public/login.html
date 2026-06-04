@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login - Time Warp</title>
+  <title>Time Warp - Login</title>
   <style>
     body { 
       font-family: 'Georgia', serif; 
@@ -25,7 +25,18 @@
       border: 1px solid rgba(245,230,211,0.2);
       box-shadow: 0 20px 40px rgba(0,0,0,0.6);
     }
-    h1 { text-align: center; margin-bottom: 30px; font-size: 2.2rem; }
+    .tabs { display: flex; margin-bottom: 30px; border-bottom: 1px solid rgba(245,230,211,0.2); }
+    .tab { 
+      flex: 1; 
+      padding: 12px; 
+      text-align: center; 
+      cursor: pointer; 
+      font-weight: bold;
+    }
+    .tab.active { 
+      border-bottom: 3px solid #E8DCC8; 
+      color: #E8DCC8; 
+    }
     input { 
       width: 100%; 
       padding: 16px; 
@@ -50,33 +61,47 @@
       margin-top: 10px;
     }
     button:hover { background: #F5E6D3; }
-    .link { text-align: center; margin-top: 25px; color: #E8DCC8; }
+    .link { text-align: center; margin-top: 20px; color: #E8DCC8; cursor: pointer; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>✦ Time Warp</h1>
-    <h2 style="text-align:center; margin-bottom:20px;">Welcome Back</h2>
-    
-    <input type="email" id="email" placeholder="Email address" autocomplete="off">
-    <input type="password" id="password" placeholder="Password" autocomplete="new-password">
-    
-    <button onclick="login()">Login</button>
-    
-    <div class="link">
-      Don't have an account? <a href="/register" style="color:#E8DCC8; text-decoration:underline;">Create Account</a>
+    <h1 style="text-align:center; margin-bottom:30px;">✦ Time Warp</h1>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab(0)" id="loginTab">Login</div>
+      <div class="tab" onclick="switchTab(1)" id="registerTab">Create Account</div>
+    </div>
+
+    <!-- Login Form -->
+    <div id="loginForm">
+      <input type="email" id="loginEmail" placeholder="Email address" autocomplete="off">
+      <input type="password" id="loginPassword" placeholder="Password" autocomplete="new-password">
+      <button onclick="login()">Login</button>
+    </div>
+
+    <!-- Register Form -->
+    <div id="registerForm" style="display:none;">
+      <input type="text" id="regName" placeholder="Full Name">
+      <input type="email" id="regEmail" placeholder="Email address" autocomplete="off">
+      <input type="password" id="regPassword" placeholder="Password">
+      <button onclick="register()">Create Account</button>
     </div>
   </div>
 
   <script>
-    async function login() {
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value.trim();
+    function switchTab(tab) {
+      document.getElementById('loginTab').classList.toggle('active', tab === 0);
+      document.getElementById('registerTab').classList.toggle('active', tab === 1);
+      document.getElementById('loginForm').style.display = tab === 0 ? 'block' : 'none';
+      document.getElementById('registerForm').style.display = tab === 1 ? 'block' : 'none';
+    }
 
-      if (!email || !password) {
-        alert("Please enter email and password");
-        return;
-      }
+    async function login() {
+      const email = document.getElementById('loginEmail').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+
+      if (!email || !password) return alert("Please fill all fields");
 
       try {
         const res = await fetch('/api/login', {
@@ -84,29 +109,51 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
         });
-
         const data = await res.json();
 
         if (data.success) {
-          // Save all important data
           localStorage.setItem('token', data.token);
           localStorage.setItem('name', data.name);
           localStorage.setItem('email', data.email);
           localStorage.setItem('isAdmin', data.isAdmin);
-
           window.location.href = '/dashboard';
         } else {
-          alert(data.error || "Invalid email or password");
+          alert(data.error || "Invalid credentials");
         }
       } catch (err) {
         alert("Server error. Please try again.");
       }
     }
 
-    // Allow pressing Enter to login
-    document.getElementById('password').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') login();
-    });
+    async function register() {
+      const name = document.getElementById('regName').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const password = document.getElementById('regPassword').value.trim();
+
+      if (!name || !email || !password) return alert("Please fill all fields");
+
+      try {
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, password })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          alert("Account created successfully! Please login.");
+          switchTab(0);
+        } else {
+          alert(data.error || "Registration failed");
+        }
+      } catch (err) {
+        alert("Server error. Please try again.");
+      }
+    }
+
+    // Allow Enter key
+    document.getElementById('loginPassword').addEventListener('keypress', e => { if (e.key === 'Enter') login(); });
+    document.getElementById('regPassword').addEventListener('keypress', e => { if (e.key === 'Enter') register(); });
   </script>
 </body>
 </html>
