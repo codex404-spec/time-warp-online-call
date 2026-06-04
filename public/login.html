@@ -3,89 +3,129 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Time Warp - Login</title>
+  <title>Time Warp - Auth</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
-    body { 
-      font-family: 'Georgia', serif; 
-      background: #0a0e1a; 
-      color: #F5E6D3; 
-      margin: 0; 
-      padding: 0; 
-      height: 100vh; 
-      display: flex; 
-      align-items: center; 
-      justify-content: center;
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Georgia&display=swap');
+    
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #0a0e1a;
     }
-    .container { 
-      max-width: 420px; 
-      width: 90%; 
-      padding: 50px 40px; 
-      background: rgba(12,16,28,0.95); 
-      border-radius: 20px; 
-      border: 1px solid rgba(245,230,211,0.2);
-      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    
+    .glass {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(245, 230, 211, 0.15);
     }
-    .tabs { display: flex; margin-bottom: 30px; border-bottom: 1px solid rgba(245,230,211,0.2); }
-    .tab { 
-      flex: 1; 
-      padding: 12px; 
-      text-align: center; 
-      cursor: pointer; 
-      font-weight: bold;
+
+    .input-neon {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(165, 180, 252, 0.3);
+      transition: all 0.3s;
     }
-    .tab.active { 
-      border-bottom: 3px solid #E8DCC8; 
-      color: #E8DCC8; 
+    .input-neon:focus {
+      border-color: #a5b4fc;
+      box-shadow: 0 0 0 3px rgba(165, 180, 252, 0.15);
+      outline: none;
     }
-    input { 
-      width: 100%; 
-      padding: 16px; 
-      margin: 12px 0; 
-      background: rgba(255,255,255,0.05); 
-      border: 1px solid rgba(245,230,211,0.3); 
-      color: #F5E6D3; 
-      border-radius: 12px; 
-      font-size: 1rem;
+    .input-error {
+      animation: shake 0.4s ease-in-out;
+      border-color: #f87171 !important;
     }
-    input:focus { outline: none; border-color: #E8DCC8; }
-    button { 
-      width: 100%; 
-      padding: 16px; 
-      background: #E8DCC8; 
-      color: #0a0e1a; 
-      border: none; 
-      border-radius: 12px; 
-      font-weight: bold; 
-      font-size: 1.1rem; 
-      cursor: pointer;
-      margin-top: 10px;
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      75% { transform: translateX(6px); }
     }
-    button:hover { background: #F5E6D3; }
-    .link { text-align: center; margin-top: 20px; color: #E8DCC8; cursor: pointer; }
+
+    .btn-neon {
+      background: linear-gradient(135deg, #6366f1, #a5b4fc);
+      transition: all 0.3s;
+    }
+    .btn-neon:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(165, 180, 252, 0.3);
+    }
+
+    .tab {
+      transition: all 0.3s;
+    }
+    .tab.active {
+      border-bottom: 3px solid #a5b4fc;
+      color: #a5b4fc;
+    }
   </style>
 </head>
-<body>
-  <div class="container">
-    <h1 style="text-align:center; margin-bottom:30px;">✦ Time Warp</h1>
+<body class="min-h-screen flex items-center justify-center p-4">
+  <div class="w-full max-w-md">
+    <div class="glass rounded-3xl p-8 shadow-2xl">
+      <!-- Logo -->
+      <div class="text-center mb-8">
+        <h1 class="text-4xl font-bold text-[#E8DCC8] flex items-center justify-center gap-3">
+          ✦ Time Warp
+        </h1>
+        <p class="text-[#F5E6D3]/70 mt-2">Connect • Chat • Compete</p>
+      </div>
 
-    <div class="tabs">
-      <div class="tab active" onclick="switchTab(0)" id="loginTab">Login</div>
-      <div class="tab" onclick="switchTab(1)" id="registerTab">Create Account</div>
-    </div>
+      <!-- Tabs -->
+      <div class="flex border-b border-white/10 mb-8">
+        <button onclick="switchTab(0)" id="loginTab" 
+                class="tab active flex-1 py-4 text-lg font-medium">Sign In</button>
+        <button onclick="switchTab(1)" id="registerTab" 
+                class="tab flex-1 py-4 text-lg font-medium">Create Account</button>
+      </div>
 
-    <!-- Login Form -->
-    <div id="loginForm">
-      <input type="email" id="loginEmail" placeholder="Email address" autocomplete="off">
-      <input type="password" id="loginPassword" placeholder="Password" autocomplete="new-password">
-      <button onclick="login()">Login</button>
-    </div>
+      <!-- Login Form -->
+      <div id="loginForm">
+        <div class="space-y-5">
+          <div>
+            <input type="email" id="loginEmail" 
+                   class="input-neon w-full px-5 py-4 rounded-2xl text-white placeholder:text-white/50"
+                   placeholder="Email address" autocomplete="off">
+          </div>
+          <div>
+            <input type="password" id="loginPassword" 
+                   class="input-neon w-full px-5 py-4 rounded-2xl text-white placeholder:text-white/50"
+                   placeholder="Password" autocomplete="new-password">
+          </div>
+          <button onclick="login()" 
+                  class="btn-neon w-full py-4 rounded-2xl text-lg font-semibold text-white min-h-[44px]">
+            Sign In
+          </button>
+        </div>
+      </div>
 
-    <!-- Register Form -->
-    <div id="registerForm" style="display:none;">
-      <input type="text" id="regName" placeholder="Full Name">
-      <input type="email" id="regEmail" placeholder="Email address" autocomplete="off">
-      <input type="password" id="regPassword" placeholder="Password">
-      <button onclick="register()">Create Account</button>
+      <!-- Register Form -->
+      <div id="registerForm" class="hidden">
+        <div class="space-y-5">
+          <div>
+            <input type="text" id="regName" 
+                   class="input-neon w-full px-5 py-4 rounded-2xl text-white placeholder:text-white/50"
+                   placeholder="Full Name">
+          </div>
+          <div>
+            <input type="email" id="regEmail" 
+                   class="input-neon w-full px-5 py-4 rounded-2xl text-white placeholder:text-white/50"
+                   placeholder="Email address" autocomplete="off">
+          </div>
+          <div>
+            <input type="password" id="regPassword" 
+                   class="input-neon w-full px-5 py-4 rounded-2xl text-white placeholder:text-white/50"
+                   placeholder="Create Password">
+          </div>
+          <button onclick="register()" 
+                  class="btn-neon w-full py-4 rounded-2xl text-lg font-semibold text-white min-h-[44px]">
+            Create Account
+          </button>
+        </div>
+      </div>
+
+      <div class="text-center mt-6 text-sm text-white/60">
+        Secure • Private • Real-time
+      </div>
     </div>
   </div>
 
@@ -93,15 +133,19 @@
     function switchTab(tab) {
       document.getElementById('loginTab').classList.toggle('active', tab === 0);
       document.getElementById('registerTab').classList.toggle('active', tab === 1);
-      document.getElementById('loginForm').style.display = tab === 0 ? 'block' : 'none';
-      document.getElementById('registerForm').style.display = tab === 1 ? 'block' : 'none';
+      document.getElementById('loginForm').classList.toggle('hidden', tab !== 0);
+      document.getElementById('registerForm').classList.toggle('hidden', tab !== 1);
     }
 
     async function login() {
       const email = document.getElementById('loginEmail').value.trim();
       const password = document.getElementById('loginPassword').value.trim();
 
-      if (!email || !password) return alert("Please fill all fields");
+      if (!email || !password) {
+        showError('loginEmail');
+        showError('loginPassword');
+        return alert("Please enter email and password");
+      }
 
       try {
         const res = await fetch('/api/login', {
@@ -109,6 +153,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
         });
+
         const data = await res.json();
 
         if (data.success) {
@@ -118,10 +163,10 @@
           localStorage.setItem('isAdmin', data.isAdmin);
           window.location.href = '/dashboard';
         } else {
-          alert(data.error || "Invalid credentials");
+          alert(data.error || "Invalid email or password");
         }
       } catch (err) {
-        alert("Server error. Please try again.");
+        alert("Connection error. Please try again.");
       }
     }
 
@@ -130,7 +175,10 @@
       const email = document.getElementById('regEmail').value.trim();
       const password = document.getElementById('regPassword').value.trim();
 
-      if (!name || !email || !password) return alert("Please fill all fields");
+      if (!name || !email || !password) {
+        alert("Please fill all fields");
+        return;
+      }
 
       try {
         const res = await fetch('/api/register', {
@@ -138,10 +186,11 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, email, password })
         });
+
         const data = await res.json();
 
         if (data.success) {
-          alert("Account created successfully! Please login.");
+          alert("✅ Account created successfully! Please sign in.");
           switchTab(0);
         } else {
           alert(data.error || "Registration failed");
@@ -151,9 +200,21 @@
       }
     }
 
-    // Allow Enter key
-    document.getElementById('loginPassword').addEventListener('keypress', e => { if (e.key === 'Enter') login(); });
-    document.getElementById('regPassword').addEventListener('keypress', e => { if (e.key === 'Enter') register(); });
+    function showError(id) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.add('input-error');
+        setTimeout(() => el.classList.remove('input-error'), 800);
+      }
+    }
+
+    // Enter key support
+    document.getElementById('loginPassword').addEventListener('keypress', e => {
+      if (e.key === 'Enter') login();
+    });
+    document.getElementById('regPassword').addEventListener('keypress', e => {
+      if (e.key === 'Enter') register();
+    });
   </script>
 </body>
 </html>
